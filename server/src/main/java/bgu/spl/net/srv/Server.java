@@ -2,6 +2,7 @@ package bgu.spl.net.srv;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
 import bgu.spl.net.api.MessagingProtocol;
+
 import java.io.Closeable;
 import java.util.function.Supplier;
 
@@ -50,5 +51,6 @@ public interface Server<T> extends Closeable {
             Supplier<MessageEncoderDecoder<T>> encoderDecoderFactory) {
         return new Reactor<T>(nthreads, port, protocolFactory, encoderDecoderFactory);
     }
+
 
 }

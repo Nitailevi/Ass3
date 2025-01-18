@@ -1,4 +1,4 @@
-package main.java.bgu.spl.net.srv;
+package bgu.spl.net.impl.stomp;
 
 import bgu.spl.net.api.MessageEncoderDecoder;
 import java.nio.charset.StandardCharsets;
@@ -23,10 +23,9 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
 
     @Override
     public byte[] encode(String message) {
-            return (message + "^@").getBytes(); //uses utf8 by default
-        }
+            return (message + "\0").getBytes(); //uses utf8 by default
+    }
     
-
 
     private void pushByte(byte nextByte) {
         // If the byte array is full, expand it
