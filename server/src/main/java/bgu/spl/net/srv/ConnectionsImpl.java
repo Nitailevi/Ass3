@@ -2,14 +2,18 @@ package bgu.spl.net.srv;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 public class ConnectionsImpl<T> implements Connections<T> {
 
-    private Map<Integer, ConnectionHandler<T>> activeClients = new ConcurrentHashMap<>(); // Maps each connectionId to its active client
-    private final Map<String, Map<Integer, Integer>> channelSubscriptions = new ConcurrentHashMap<>(); // Maps each channel (String) to its subscribed clients (connectionId) and their subscriberId
+    private final Map<Integer, ConnectionHandler<T>> activeClients = new ConcurrentHashMap<>(); // Maps each connectionId to its active client
+    private final Map<String, Map<Integer, String>> channelSubscriptions = new ConcurrentHashMap<>(); // Maps each channel (String) to its subscribed clients connectionId (Integer) and their subscriberId (Integer)
+    private final Map<String, String> users = new ConcurrentHashMap<>(); // Storage all users data
 
-    public ConnectionsImpl() {
-    }
+    //maybe we will change to different data structure withou save the connections id
+    private final Map<String, Integer> loggedInUsers = new ConcurrentHashMap<>(); // Storage all loggedin users each login(String) and its own connectionId (Integer)
+
+    public ConnectionsImpl() {}
 
     public boolean send(int connectionId, T msg) {
         ConnectionHandler<T> handler = activeClients.get(connectionId); // Getting ConnectionHandler that matches the given connectionId in the activeClients map
@@ -20,20 +24,61 @@ public class ConnectionsImpl<T> implements Connections<T> {
         return false;
     }
 
-    public void send(String channel, T msg) {
-        Map<Integer, Integer> subscribers = channelSubscriptions.get(channel);
+    public void send(String channel, Function<String, T> messageGenerator) {
+        Map<Integer, String> subscribers = channelSubscriptions.get(channel);
         if (subscribers != null) {
-            for (Integer connectionId : subscribers.keySet()) { // Iterate through each client that subscri
-                send(connectionId, msg);
+            for (Map.Entry<Integer, String> entry : subscribers.entrySet()) {  // Iterate the map to get connectionId and subscriberId
+                Integer connectionId = entry.getKey();
+                String subscriberId = entry.getValue();
+                T message = messageGenerator.apply(subscriberId);
+                send(connectionId, message); 
             }
         }
     }
-    
 
     public void disconnect(int connectionId) {
-        for (Map<Integer, Integer> subscribers : channelSubscriptions.values()) { 
+        for (Map<Integer, String> subscribers : channelSubscriptions.values()) { 
             subscribers.remove(connectionId); // Remove the client from all subscribed channels
         }
         activeClients.remove(connectionId); // Remove the client from active connections
+        loggedInUsers.entrySet().removeIf(entry -> entry.getValue()==connectionId); // Find and remove the user from loggedInUsers
+    }
+
+    public void subscribe(String channel, int connectionId, String subscriberId) {
+        channelSubscriptions.computeIfAbsent(channel, k -> new ConcurrentHashMap<>()).put(connectionId, subscriberId); // Add the client to the channel's map
+    }
+    
+    public void unsubscribe(String subscriberId) {
+        for (Map.Entry<String, Map<Integer, String>> entry : channelSubscriptions.entrySet()) { // Iterate all channels
+            Map<Integer, String> subscribers = entry.getValue();
+    
+            Integer connectionIdToRemove = null;
+            for (Map.Entry<Integer, String> subscriberEntry : subscribers.entrySet()) {
+                if (subscriberId.equals(subscriberEntry.getValue())) { // Find the connectionId associated with the given subscriberId
+                    connectionIdToRemove = subscriberEntry.getKey();
+                    break;
+                }
+            }
+    
+            if (connectionIdToRemove != null) {
+                subscribers.remove(connectionIdToRemove); // If found this connectionId remove it
+//               if (subscribers.isEmpty()) 
+//                  channelSubscriptions.remove(channel); // If the channel is now empty, remove it entirely
+                break; // Subscriber ID is unique 
+            }
+        }
+    }
+
+    public String authenticate(String login, String passcode, int connectionId){
+        if(loggedInUsers.containsKey(login)){
+            return "The client already logged in, log out before trying again";
+        }
+        else{
+            users.putIfAbsent(login, passcode);
+            if(users.get(login)!=passcode)
+                return "Wrong Password";
+            loggedInUsers.put(login ,connectionId);
+            return "";  
+        }
     }
 }
