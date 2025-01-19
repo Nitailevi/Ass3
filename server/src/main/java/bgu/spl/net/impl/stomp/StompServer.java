@@ -1,6 +1,5 @@
 package bgu.spl.net.impl.stomp;
 import bgu.spl.net.srv.Server;
-import bgu.spl.net.impl.stomp.StompMessagingProtocolImpl;
 
 public class StompServer {
 

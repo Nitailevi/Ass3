@@ -1,5 +1,6 @@
 package bgu.spl.net.srv;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -35,13 +36,21 @@ public class ConnectionsImpl<T> implements Connections<T> {
             }
         }
     }
-
     public void disconnect(int connectionId) {
-        for (Map<Integer, String> subscribers : channelSubscriptions.values()) { 
+        for (Map<Integer, String> subscribers : channelSubscriptions.values()) {
             subscribers.remove(connectionId); // Remove the client from all subscribed channels
         }
         activeClients.remove(connectionId); // Remove the client from active connections
-        loggedInUsers.entrySet().removeIf(entry -> entry.getValue()==connectionId); // Find and remove the user from loggedInUsers
+        loggedInUsers.entrySet().removeIf(entry -> entry.getValue() == connectionId); // Find and remove the user from loggedInUsers
+                                                                                 
+        ConnectionHandler<T> handler = activeClients.remove(connectionId);
+        if (handler != null) {
+            try {
+                handler.close(); // Close the connection handler
+            } catch (IOException e) {
+                System.err.println("Error closing connection for ID " + connectionId + ": " + e.getMessage());
+            }
+        }
     }
 
     public void subscribe(String channel, int connectionId, String subscriberId) {

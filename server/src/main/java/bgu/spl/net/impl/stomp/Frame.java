@@ -135,6 +135,10 @@ public class Frame {
     public void handleError(String errorMessage) {
         String errorFrame = "ERROR\nmessage:" + errorMessage + "\n\n\0";
         connections.send(connectionId, errorFrame);
+
+        //need to add additional headears
+        //need to close the socket afet send error frame
+    //    connections.disconnect(connectionId); 
     }
 
 
