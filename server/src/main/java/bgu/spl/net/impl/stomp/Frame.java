@@ -110,7 +110,7 @@ public class Frame {
             handleError("Missing 'id' header in SUBSCRIBE frame");
             return;
         }
-        connections.unsubscribe(subscriberId); // Unsubscribe the client to the channel
+        connections.unsubscribe(subscriberId, connectionId); // Unsubscribe the client to the channel
     
         String receipt = headers.get("receipt");
         if (receipt != null) {
