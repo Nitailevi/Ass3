@@ -2,6 +2,7 @@ package bgu.spl.net.impl.stomp;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bgu.spl.net.srv.Connections;
@@ -37,7 +38,7 @@ public class Frame {
         return command;
     }
 
-    public void handleConnect() {
+    public void handleConnect(AtomicBoolean  error) {
         String acceptVersion = headers.get("accept-version");
         String host = headers.get("host");
         String login = headers.get("login");
@@ -45,34 +46,39 @@ public class Frame {
 
         if (acceptVersion == null || !acceptVersion.equals("1.2")) {
             handleError("Unsupported STOMP version. Only version 1.2 is supported");
+            error.set(true);
             return;
         }
     
         if (host == null || !host.equals("stomp.cs.bgu.ac.il")) {
             handleError("Invalid host. Expected stomp.cs.bgu.ac.il");
+            error.set(true);
             return;
         }
     
         if (login == null || passcode == null) {
             handleError("Missing login or passcode");
+            error.set(true);
             return;
         }
     
         
-        String message=connections.authenticate(login,passcode, connectionId);
-        if (!(message.equals(""))) { // Check if user is already logged in
+        String message=connections.authenticate(login ,passcode, connectionId);
+        if (message!=null && !(message.equals("no error"))) { // Check if user is already logged in
             handleError(message);
+            error.set(true);
             return;
         }
-    
+
         connections.send(connectionId, "CONNECTED\nversion:1.2\n\n\u0000");
     }
 
-    public void handleSend() {
+    public void handleSend(AtomicBoolean error) {
         String destination = headers.get("destination");
     
         if (destination == null) {
             handleError("Missing 'destination' header in SEND frame.");
+            error.set(true);
             return;
         }
         String messageId = generateMessageId();
@@ -86,12 +92,13 @@ public class Frame {
     }
 
 
-    public void handleSubscribe() {
+    public void handleSubscribe(AtomicBoolean error) {
         String destination = headers.get("destination");
         String subscriberId = headers.get("id");
     
         if (destination == null || subscriberId == null) {
             handleError("Missing 'destination' or 'id' header in SUBSCRIBE frame");
+            error.set(true);
             return;
         }
     
@@ -103,14 +110,15 @@ public class Frame {
         }
     }
 
-    public void handleUnSubscribe() {
+    public void handleUnSubscribe(AtomicBoolean error) {
         String subscriberId = headers.get("id");
     
         if (subscriberId == null) {
             handleError("Missing 'id' header in SUBSCRIBE frame");
+            error.set(true);
             return;
         }
-        connections.unsubscribe(subscriberId); // Unsubscribe the client to the channel
+        connections.unsubscribe(subscriberId, connectionId); // Unsubscribe the client to the channel
     
         String receipt = headers.get("receipt");
         if (receipt != null) {
@@ -119,12 +127,11 @@ public class Frame {
     }
 
     public void handleDisconnect(){
-        connections.disconnect(connectionId);
-
         String receipt = headers.get("receipt");
         if (receipt != null) {
             connections.send(connectionId, "RECEIPT\nreceipt-id:" + receipt + "\n\n\u0000");
         }
+        connections.disconnect(connectionId);
 
     }
     
@@ -135,6 +142,7 @@ public class Frame {
     public void handleError(String errorMessage) {
         String errorFrame = "ERROR\nmessage:" + errorMessage + "\n\n\0";
         connections.send(connectionId, errorFrame);
+
     }
 
 

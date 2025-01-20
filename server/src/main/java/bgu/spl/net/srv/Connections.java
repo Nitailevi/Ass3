@@ -13,7 +13,7 @@ public interface Connections<T> {
 
 
     void subscribe(String channel, int connectionId, String subscriberId);
-    void unsubscribe(String subscriberId);
+    void unsubscribe(String subscriberId, int connectionId);
     String authenticate(String login, String passcode, int connectionId);
 
 }
