@@ -1,4 +1,6 @@
 package bgu.spl.net.impl.stomp;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import bgu.spl.net.api.StompMessagingProtocol;
 import bgu.spl.net.srv.Connections;
 
@@ -7,6 +9,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     private boolean shouldTerminate=false;
     private int connectionId;
     private Connections<String> connections;
+    private AtomicBoolean error;
 
 
     public void start(int connectionId, Connections<String> connections){
@@ -20,22 +23,28 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
        switch (command) {
         case "CONNECT":
-            frame.handleConnect();
+            frame.handleConnect(error);
+            if(error != null)shouldTerminate();
             break;
         case "SEND":
-            frame.handleSend();
+            frame.handleSend(error);
+            if(error != null)shouldTerminate();
             break;
         case "SUBSCRIBE":
-            frame.handleSubscribe();
+            frame.handleSubscribe(error);
+            if(error != null)shouldTerminate();
             break;
         case "UNSUBSCRIBE":
-            frame.handleUnSubscribe();
+            frame.handleUnSubscribe(error);
+            if(error != null)shouldTerminate();
             break;
         case "DISCONNECT":
             frame.handleDisconnect();
+            shouldTerminate();
             break;
         default:
             frame.handleError("Unknown command");
+            shouldTerminate();
         }
     }
 	

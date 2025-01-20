@@ -42,15 +42,16 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
         activeClients.remove(connectionId); // Remove the client from active connections
         loggedInUsers.entrySet().removeIf(entry -> entry.getValue() == connectionId); // Find and remove the user from loggedInUsers
-                                                                                 
-        ConnectionHandler<T> handler = activeClients.remove(connectionId);
-        if (handler != null) {
-            try {
-                handler.close(); // Close the connection handler
-            } catch (IOException e) {
-                System.err.println("Error closing connection for ID " + connectionId + ": " + e.getMessage());
-            }
-        }
+                                            
+        activeClients.remove(connectionId);
+        // ConnectionHandler<T> handler = activeClients.remove(connectionId);
+        // if (handler != null) {
+        //     try {
+        //         handler.close(); // Close the connection handler
+        //     } catch (IOException e) {
+        //         System.err.println("Error closing connection for ID " + connectionId + ": " + e.getMessage());
+        //     }
+        // }
     }
 
     public void subscribe(String channel, int connectionId, String subscriberId) {
@@ -84,10 +85,11 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
         else{
             users.putIfAbsent(login, passcode);
-            if(users.get(login)!=passcode)
+            if(users.get(login)!=passcode){
                 return "Wrong Password";
+            }
             loggedInUsers.put(login ,connectionId);
-            return "";  
+            return "no error";  
         }
     }
 }

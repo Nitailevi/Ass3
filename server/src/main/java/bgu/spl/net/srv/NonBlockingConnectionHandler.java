@@ -20,7 +20,6 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
     private final Queue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
     private final SocketChannel chan;
     private final Reactor<T> reactor;
-    private T response;
 
     public NonBlockingConnectionHandler(
             MessageEncoderDecoder<T> reader,
@@ -49,15 +48,10 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
                 try {
                     while (buf.hasRemaining()) {
                         T nextMessage = encdec.decodeNextByte(buf.get());
-                        if (nextMessage != null) {
+                        if (nextMessage != null) 
                             protocol.process(nextMessage);
-                            if (response != null) {
-                                writeQueue.add(ByteBuffer.wrap(encdec.encode(response)));
-                                reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                            }
-                        }
                     }
-                } finally {
+                }finally {
                     releaseBuffer(buf);
                 }
             };
@@ -66,7 +60,6 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
             close();
             return null;
         }
-
     }
 
     public void close() {
@@ -119,6 +112,15 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
 
     @Override
     public void send(T msg) {
-        this.response=msg;
+        if (msg != null) {
+            try {
+                synchronized (writeQueue) { 
+                    writeQueue.add(ByteBuffer.wrap(encdec.encode(msg))); // Encode and add the message to the queue
+                }
+                reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE); // Notify the reactor to handle both writing and reading
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

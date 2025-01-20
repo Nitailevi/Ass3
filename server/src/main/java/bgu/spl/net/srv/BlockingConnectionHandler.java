@@ -15,7 +15,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private BufferedInputStream in;
     private BufferedOutputStream out;
     private volatile boolean connected = true;
-    private T response;
 
     public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, MessagingProtocol<T> protocol) {
         this.sock = sock;
@@ -25,31 +24,25 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void run() {
-        try (Socket sock = this.sock) { //just for automatic closing
-            int read;
-
+        try (Socket sock = this.sock) { // Automatically close the socket when done
             in = new BufferedInputStream(sock.getInputStream());
             out = new BufferedOutputStream(sock.getOutputStream());
 
+            int read;
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
-                T nextMessage = encdec.decodeNextByte((byte) read);
+                T nextMessage = encdec.decodeNextByte((byte) read); // Decode incoming message
                 if (nextMessage != null) {
-                    protocol.process(nextMessage);
-                    if (response != null) {
-
-                    // byte[] encodedMessage = encdec.encode(msg); // Encode the message
-                    //  synchronized (out) { // Ensure thread safety for shared resource
-                    //     out.write(encodedMessage);
-                    //     out.flush(); // Flush the output stream to send the message immediately
-                    //  }
-                        
-                        out.write(encdec.encode(response));
-                        out.flush();
-                    }
+                    protocol.process(nextMessage); // Process the decoded message
                 }
             }
         } catch (IOException ex) {
-            ex.printStackTrace();
+            ex.printStackTrace(); // Log any exceptions
+        } finally {
+            try {
+                close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -61,6 +54,16 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-        this.response=msg;
+        try {
+            synchronized (out) { // Ensure thread safety during writes
+                out.write(encdec.encode(msg)); // Encode and write the message
+                out.flush(); // Flush the output stream to ensure the message is sent immediately
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace(); // Log any exceptions
+        }
     }
 }
+
+
+
