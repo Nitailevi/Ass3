@@ -19,13 +19,13 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
     private final MessageEncoderDecoder<T> encdec;
     private final Queue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
     private final SocketChannel chan;
-    private final Reactor reactor;
+    private final Reactor<T> reactor;
 
     public NonBlockingConnectionHandler(
             MessageEncoderDecoder<T> reader,
             MessagingProtocol<T> protocol,
             SocketChannel chan,
-            Reactor reactor) {
+            Reactor<T> reactor) {
         this.chan = chan;
         this.encdec = reader;
         this.protocol = protocol;
@@ -48,15 +48,10 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
                 try {
                     while (buf.hasRemaining()) {
                         T nextMessage = encdec.decodeNextByte(buf.get());
-                        if (nextMessage != null) {
-                            T response = protocol.process(nextMessage);
-                            if (response != null) {
-                                writeQueue.add(ByteBuffer.wrap(encdec.encode(response)));
-                                reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                            }
-                        }
+                        if (nextMessage != null) 
+                            protocol.process(nextMessage);
                     }
-                } finally {
+                }finally {
                     releaseBuffer(buf);
                 }
             };
@@ -65,7 +60,6 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
             close();
             return null;
         }
-
     }
 
     public void close() {
@@ -118,6 +112,15 @@ public class NonBlockingConnectionHandler<T> implements ConnectionHandler<T> {
 
     @Override
     public void send(T msg) {
-        //IMPLEMENT IF NEEDED
+        if (msg != null) {
+            try {
+                synchronized (writeQueue) { 
+                    writeQueue.add(ByteBuffer.wrap(encdec.encode(msg))); // Encode and add the message to the queue
+                }
+                reactor.updateInterestedOps(chan, SelectionKey.OP_READ | SelectionKey.OP_WRITE); // Notify the reactor to handle both writing and reading
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

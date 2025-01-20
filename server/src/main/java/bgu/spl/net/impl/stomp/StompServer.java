@@ -1,6 +1,9 @@
 package bgu.spl.net.impl.stomp;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import bgu.spl.net.srv.Connections;
+import bgu.spl.net.srv.ConnectionsImpl;
 import bgu.spl.net.srv.Server;
-import bgu.spl.net.impl.stomp.StompMessagingProtocolImpl;
 
 public class StompServer {
 
@@ -19,18 +22,31 @@ public class StompServer {
         }
 
         String serverType = args[1].toLowerCase(); // Make sure the server type is case-insensitive
+        Connections<String> connections = new ConnectionsImpl<>();
+        AtomicInteger connectionIdGenerator = new AtomicInteger(1);
+
 
         if (serverType.equals("tpc")) {
             Server.<String>threadPerClient(
                 port,
-                StompMessagingProtocolImpl::new, // Correct Supplier for MessagingProtocol
+                () -> {
+                    int connectionId = connectionIdGenerator.getAndIncrement();
+                    StompMessagingProtocolImpl protocol = new StompMessagingProtocolImpl();
+                    protocol.start(connectionId, connections);
+                    return protocol;
+                }, 
                 StompEncoderDecoder::new // Correct Supplier for MessageEncoderDecoder
             ).serve();
         } else if (serverType.equals("reactor")) {
             Server.<String>reactor(
                 Runtime.getRuntime().availableProcessors(), // Number of threads available
                 port,
-                StompMessagingProtocolImpl::new, // Correct Supplier for MessagingProtocol
+                () -> {
+                    int connectionId = connectionIdGenerator.getAndIncrement();
+                    StompMessagingProtocolImpl protocol = new StompMessagingProtocolImpl();
+                    protocol.start(connectionId, connections);
+                    return protocol;
+                },
                 StompEncoderDecoder::new // Correct Supplier for MessageEncoderDecoder
             ).serve();
         } else {

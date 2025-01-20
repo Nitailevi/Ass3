@@ -23,7 +23,7 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
 
     @Override
     public byte[] encode(String message) {
-            return (message + "\0").getBytes(); //uses utf8 by default
+            return (message + "\u0000").getBytes(); //uses utf8 by default
     }
     
 
@@ -43,4 +43,4 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
         return result;
     }
 }
-        
+     
