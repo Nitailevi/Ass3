@@ -43,4 +43,4 @@ public class StompEncoderDecoder implements MessageEncoderDecoder<String> {
         return result;
     }
 }
-        
+     
