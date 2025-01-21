@@ -1,6 +1,5 @@
 package bgu.spl.net.srv;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -16,6 +15,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
     public ConnectionsImpl() {}
 
+    @Override
     public boolean send(int connectionId, T msg) {
         ConnectionHandler<T> handler = activeClients.get(connectionId); // Getting ConnectionHandler that matches the given connectionId in the activeClients map
         if (handler != null) {
@@ -36,6 +36,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
             }
         }
     }
+    @Override
     public void disconnect(int connectionId) {
         for (Map<Integer, String> subscribers : channelSubscriptions.values()) {
             subscribers.remove(connectionId); // Remove the client from all subscribed channels
@@ -80,16 +81,25 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
     public String authenticate(String login, String passcode, int connectionId){
+        System.out.println("Received authentication request for login: " + login);
         if(loggedInUsers.containsKey(login)){
+            System.out.println("Client already logged in: " + login);
+
             return "The client already logged in, log out before trying again";
-        }
-        else{
+        } else {
             users.putIfAbsent(login, passcode);
-            if(users.get(login)!=passcode){
+            if (!users.get(login).equals(passcode)) {
+                System.out.println("Wrong password for login: " + login);
+
                 return "Wrong Password";
             }
-            loggedInUsers.put(login ,connectionId);
+            loggedInUsers.put(login, connectionId);
+            
+            System.out.println("Client authenticated and registered with connectionId: " + connectionId);
             return "no error";  
         }
+    }
+    public Map<Integer, ConnectionHandler> getActiveClients() {
+        return activeClients;
     }
 }

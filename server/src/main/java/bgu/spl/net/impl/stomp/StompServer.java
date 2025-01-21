@@ -1,9 +1,9 @@
 package bgu.spl.net.impl.stomp;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import bgu.spl.net.srv.Connections;
 import bgu.spl.net.srv.ConnectionsImpl;
 import bgu.spl.net.srv.Server;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class StompServer {
 
@@ -38,7 +38,7 @@ public class StompServer {
                 StompEncoderDecoder::new // Correct Supplier for MessageEncoderDecoder
             ).serve();
         } else if (serverType.equals("reactor")) {
-            Server.<String>reactor(
+            Server.<String> reactor(
                 Runtime.getRuntime().availableProcessors(), // Number of threads available
                 port,
                 () -> {

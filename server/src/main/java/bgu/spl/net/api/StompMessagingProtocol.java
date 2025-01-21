@@ -6,12 +6,17 @@ public interface StompMessagingProtocol<T> extends MessagingProtocol<T>{
 	/**
 	 * Used to initiate the current client protocol with it's personal connection ID and the connections implementation
 	**/
+    @Override
     void start(int connectionId, Connections<T> connections);
     
+    @Override
     void process(T message);
 	
 	/**
      * @return true if the connection should be terminated
      */
+    @Override
     boolean shouldTerminate();
+
+   
 }
