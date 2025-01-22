@@ -15,19 +15,24 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
     private BufferedInputStream in;
     private BufferedOutputStream out;
     private volatile boolean connected = true;
+    private final int connectionId;
+    private final Connections<T> connections;
 
-    public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, MessagingProtocol<T> protocol) {
-        this.sock = sock;
-        this.encdec = reader;
-        this.protocol = protocol;
-    }
+
+    public BlockingConnectionHandler(Socket sock, MessageEncoderDecoder<T> reader, MessagingProtocol<T> protocol, int connectionId ,Connections<T> connections) {
+    this.sock = sock;
+    this.encdec = reader;
+    this.protocol = protocol;
+    this.connectionId = connectionId; 
+    this.connections = connections;  
+}
 
     @Override
     public void run() {
         try (Socket sock = this.sock) { // Automatically close the socket when done
             in = new BufferedInputStream(sock.getInputStream());
             out = new BufferedOutputStream(sock.getOutputStream());
-
+            protocol.start(connectionId, connections);           
             int read;
             while (!protocol.shouldTerminate() && connected && (read = in.read()) >= 0) {
                 T nextMessage = encdec.decodeNextByte((byte) read); // Decode incoming message

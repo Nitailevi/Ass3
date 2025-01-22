@@ -5,6 +5,7 @@ import bgu.spl.net.api.MessagingProtocol;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 public abstract class BaseServer<T> implements Server<T> {
@@ -31,18 +32,15 @@ public abstract class BaseServer<T> implements Server<T> {
 
         try (ServerSocket serverSock = new ServerSocket(port)) {
 			System.out.println("Server started");
-
             this.sock = serverSock; //just to be able to close
 
             while (!Thread.currentThread().isInterrupted()) {
-
                 Socket clientSock = serverSock.accept();
 
-                BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(
-                        clientSock,
-                        encdecFactory.get(),
-                        protocolFactory.get());
-
+                int connectionId = connectionIdGenerator.getAndIncrement();
+                BlockingConnectionHandler<T> handler = new BlockingConnectionHandler<>(clientSock, encdecFactory.get(), protocolFactory.get(), connectionId, connections);
+                //add to activeclients
+                connections.addOrUpdateConnectionHandler(connectionId, (ConnectionHandler<T>) handler);
                 execute(handler);
             }
         } catch (IOException ex) {

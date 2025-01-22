@@ -14,6 +14,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
     public ConnectionsImpl() {}
 
+    @Override
     public boolean send(int connectionId, T msg) {
         ConnectionHandler<T> handler = activeClients.get(connectionId); // Getting ConnectionHandler that matches the given connectionId in the activeClients map
         if (handler != null) {
@@ -36,6 +37,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
         return complete;
     }
+    @Override
     public void disconnect(int connectionId) {
         for (Map<Integer, String> subscribers : channelSubscriptions.values()) {
             subscribers.remove(connectionId); // Remove the client from all subscribed channels
@@ -82,20 +84,6 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
     public String authenticate(String login, String passcode, int connectionId){
-<<<<<<< Updated upstream
-        if(loggedInUsers.containsKey(login)){
-            return "The client already logged in, log out before trying again";
-        }
-        else{
-            users.putIfAbsent(login, passcode);
-            if(users.get(login)!=passcode){
-                return "Wrong Password";
-            }
-            loggedInUsers.put(login ,connectionId);
-            return "no error";  
-        }
-    }
-=======
         System.out.println("authentication request for login: " + login);
 
         if(loggedInUsers.containsKey(login)){
@@ -130,5 +118,4 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
         return false;
     }
->>>>>>> Stashed changes
 }
