@@ -1,19 +1,27 @@
 package bgu.spl.net.srv;
+<<<<<<< Updated upstream
 
 import java.io.IOException;
+=======
+>>>>>>> Stashed changes
 import java.util.function.Function;
 
 public interface Connections<T> {
 
     boolean send(int connectionId, T msg);
 
-    void send(String channel, Function<String, T> messageGenerator);
+    boolean send(String channel, Function<String, T> messageGenerator);
 
     void disconnect(int connectionId);
 
 
-    void subscribe(String channel, int connectionId, String subscriberId);
+    boolean subscribe(String channel, int connectionId, String subscriberId);
     void unsubscribe(String subscriberId, int connectionId);
     String authenticate(String login, String passcode, int connectionId);
+<<<<<<< Updated upstream
+=======
+    void addOrUpdateConnectionHandler(int connectionId, ConnectionHandler<T> handler);
+    boolean checkIfSubscribed(String destenation, int connectionId);
+>>>>>>> Stashed changes
 
 }
