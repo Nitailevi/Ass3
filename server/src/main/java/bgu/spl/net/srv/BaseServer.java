@@ -14,7 +14,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private final Supplier<MessageEncoderDecoder<T>> encdecFactory;
     private ServerSocket sock;
     private int clientID = 0; // tracks client ID
-    private ConnectionsImpl connections;
+    private ConnectionsImpl<String> connections;
 
     public BaseServer(
             int port,
@@ -25,7 +25,7 @@ public abstract class BaseServer<T> implements Server<T> {
         this.protocolFactory = protocolFactory;
         this.encdecFactory = encdecFactory;
 		this.sock = null;
-        this.connections = new ConnectionsImpl();
+        this.connections = new ConnectionsImpl<>();
     }
 
     @Override

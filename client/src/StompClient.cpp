@@ -1,4 +1,16 @@
-int main(int argc, char *argv[]) {
-	// TODO: implement the STOMP client
-	return 0;
-}
+#include <iostream>
+#include <thread>
+#include <sstream>
+#include <string>
+#include "ConnectionHandler.h"
+
+class StompClient {
+private:
+    ConnectionHandler connectionHandler;
+    bool isLoggedIn;
+
+public:
+    StompClient(const std::string& host, int port)
+        : connectionHandler(host, port), isLoggedIn(false) {}
+
+};

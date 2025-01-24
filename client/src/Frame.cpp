@@ -1,0 +1,277 @@
+#include "Frame.h"
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include "ConnectionHandler.h"
+#include "event.h" // Include the header file where the event structure is defined
+
+// Assuming the parseEventsFile function and names_and_events type are defined in event.h
+names_and_events parseEventsFile(const std::string& filePath);
+
+// Default constructor
+Frame::Frame() : command(""), body("") {}
+
+// Parse a raw frame = first line of frame
+Frame::Frame(const std::string& rawFrame) {
+    std::istringstream stream(rawFrame);
+    std::getline(stream, command); // First line is the command
+
+    // Parse headers
+    std::string line;
+    while (std::getline(stream, line) && !line.empty()) { //while theres a message
+        size_t delimiter = line.find(':');
+        if (delimiter != std::string::npos) { //delimiter is found
+            std::string key = line.substr(0, delimiter);    //key is the first part of the line
+            std::string value = line.substr(delimiter + 1); //value is the second part of the line
+            headers[key] = value;                        //add the key and value to the headers
+        }
+    }
+
+    // Read the body
+    std::getline(stream, body, '\0'); // Read until the null character
+}
+
+// Construct a frame
+Frame::Frame(const std::string& command, const std::unordered_map<std::string, std::string>& headers, const std::string& body)
+    : command(command), headers(headers), body(body), subscriptionId(1), receiptId(1) {}
+
+// Getters
+std::string Frame::getCommand() const {
+    return command;
+}
+
+std::string Frame::getHeader(const std::string& key) const {
+    try {
+        return headers.at(key);
+    } catch (const std::out_of_range&) {
+        return "no such key";
+    }
+}
+
+std::string Frame::getBody() const {
+    return body;
+}
+
+// Convert the frame to a string
+std::string Frame::toString() const {
+    std::ostringstream frame;
+    frame << command << "\n";
+    for (const std::pair<const std::string, std::string>& header : headers) {
+        frame << header.first << ":" << header.second << "\n";
+    }
+    frame << "\n" << body << "\0";
+    return frame.str();
+}
+// Handle CONNECT frame
+void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, bool& shouldTerminate) {
+    // Build CONNECT frame
+    std::unordered_map<std::string, std::string> headers = {
+        {"accept-version", "1.2"},
+        {"host", hostPort},
+        {"login", username},
+        {"passcode", password}
+    };
+    Frame connectFrame("CONNECT", headers, "");
+
+    // Send frame using ConnectionHandler
+    std::string frameString = connectFrame.toString(); // build the frame with tostring
+    if (!connectionHandler.sendLine(frameString)) { // send the frame and check if it was sent
+        std::cerr << "Failed to send CONNECT frame.\n";
+        shouldTerminate = true;
+    }
+}
+
+// Handle SUBSCRIBE frame
+void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
+   
+    std::unordered_map<std::string, std::string> headers = {
+        {"destination", "/" + channelName},
+        {"id", std::to_string(subscriptionId++)},
+        {"receipt", std::to_string(receiptId++)}
+    };
+    Frame subscribeFrame("SUBSCRIBE", headers, "");
+
+    // Send frame
+    std::string frameString = subscribeFrame.toString();
+    if (!connectionHandler.sendLine(frameString)) {
+        std::cerr << "Failed to send SUBSCRIBE frame.\n";
+    }
+}
+
+// Handle UNSUBSCRIBE frame
+void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
+    static int receiptId = 1;
+
+    std::unordered_map<std::string, std::string> headers = {
+        {"id", channelName}, // Assume channelName as ID for simplicity???
+        {"receipt", std::to_string(receiptId++)}
+    };
+    Frame unsubscribeFrame("UNSUBSCRIBE", headers, "");
+
+    // Send frame
+    std::string frameString = unsubscribeFrame.toString();
+    if (!connectionHandler.sendLine(frameString)) {
+        std::cerr << "Failed to send UNSUBSCRIBE frame.\n";
+    }
+}
+
+// Handle REPORT (SEND frames for multiple events)
+void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string& filePath) {
+    // Parse the events file using the provided parser
+    names_and_events parsedData = static_cast<names_and_events(*)(const std::string&)>(parseEventsFile)(filePath);
+
+    // Extract the channel name
+    std::string channelName = parsedData.channel_name;
+
+       // Save the parsed events
+    for (const Event& event : parsedData.events) { //might not be necessery - maybe DELETE
+        eventsStorage[event.get_date_time()] = event;
+    }
+    // Update the summary reports- keep track of the events reported by each user for each channel
+    for (const Event& event : parsedData.events) {
+
+        std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
+       
+        std::string eventOwnerUser = event.getEventOwnerUser();
+        summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
+
+        // Update statistics- based on gneeral info map
+        report.totalReports++; // update count
+        if (event.get_general_information().at("active") == "true") {
+            report.activeCount++; // update count
+        }
+        if (event.get_general_information().at("forces_arrival_at_scene") == "true") {
+            report.forcesArrivalCount++; // update count
+        }
+
+        // Add the event
+        report.events.push_back(event);
+
+    }
+    // Loop through each event and send it as a SEND frame
+    for (const Event& event : parsedData.events) {
+        // Build the SEND frame headers
+        std::unordered_map<std::string, std::string> headers = {
+            {"destination", "/" + channelName},    // Use the parsed channel name
+            {"content-type", "text/plain"}         // Indicate plain text message
+        };
+
+        // Format the event body according to the specified report format
+        std::string body = "user: " + event.getEventOwnerUser() + "\n" +
+                           "city: " + event.get_city() + "\n" +
+                           "event name: " + event.get_name() + "\n" +
+                           "date time: " + std::to_string(event.get_date_time()) + "\n" +
+                           "general information:\n";
+
+        // Add general information to the body
+        for (const auto& [key, value] : event.get_general_information()) {
+            body += key + ": " + value + "\n";
+        }
+
+        // Add the description to the body
+        body += "description:\n" + event.get_description() + "\n";
+
+        // Create and send the SEND frame
+        Frame finishedFrame("SEND", headers, body);
+        std::string frameString = finishedFrame.toString();
+        if (!connectionHandler.sendLine(frameString)) {
+            std::cerr << "Failed to send SEND frame for event: " << event.get_name() << "\n";
+        }
+    }
+}
+const std::map<int, Event>& Frame::geteventsStorage() const {
+    return eventsStorage;
+}
+
+// Handle DISCONNECT frame
+void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldTerminate) {
+
+    std::unordered_map<std::string, std::string> headers = {
+        {"receipt", std::to_string(receiptId++)}
+    };
+    Frame disconnectFrame("DISCONNECT", headers, "");
+
+    // Send frame
+    std::string frameString = disconnectFrame.toString();
+    if (!connectionHandler.sendLine(frameString)) {
+        std::cerr << "Failed to send DISCONNECT frame.\n";
+    }
+     // Close the socket
+    connectionHandler.close(); // might not be necessery- maybe better in main
+    shouldTerminate = true; // Signal protocol termination
+}
+//handle  summary
+void Frame::handleSummary(const std::string& channelName, const std::string& user, const std::string& filePath) {
+    // Open or create the output file
+    std::ofstream outputFile(filePath); // ofStream legit opens if not existant
+    if (!outputFile) {
+        std::cerr << "Failed to open file: " << filePath << " for writing.\n";
+        return;
+    }
+
+    // Lock the reports map while accessing it- thread safe
+    std::lock_guard<std::mutex> lock(reportsMutex);
+
+    // Check if the user and channel exist in the map
+    if (reports.find(channelName) == reports.end() || reports[channelName].find(user) == reports[channelName].end()) { //end means non existant
+        std::cerr << "No reports found for channel: " << channelName << " and user: " << user << "\n";
+        return;
+    }
+
+    summaryReport& report = reports[channelName][user]; // Get the report for the user + channel
+
+   // Sort events by date_time and then by event_name
+   // sort function is used to sort the vector in ascending order ,implementation of compartor by lambda function
+            std::sort(report.events.begin(), report.events.end(), [](const Event& a, const Event& b) { 
+            if (a.get_date_time() == b.get_date_time()) {
+                return a.get_name() < b.get_name();
+            }
+            return a.get_date_time() < b.get_date_time();
+        });
+    //at this point- the events are sorted
+
+    // Print the sorted events for verification - toDELETE
+    std::cout << "Sorted events for channel: " << channelName << " and user: " << user << "\n";
+    for (const Event& event : report.events) {
+        std::cout << "Event name: " << event.get_name() << ", Date time: " << event.get_date_time() << "\n";
+    }   
+
+    // Write the header
+    outputFile << "Channel: " << channelName << "\n";
+    outputFile << "Stats:\n";
+    outputFile << "Total: " << report.totalReports << "\n";
+    outputFile << "Active: " << report.activeCount << "\n";
+    outputFile << "Forces arrival at scene: " << report.forcesArrivalCount << "\n\n";
+
+    // Write the sorted event details
+    outputFile << "Event Reports:\n";
+    int reportNumber = 1;
+
+    for (const Event& event : report.events) {
+        outputFile << "Report_" << reportNumber++ << ":\n";
+        outputFile << "City: " << event.get_city() << "\n";
+        outputFile << "Date time: " << epochToDate(event.get_date_time()) << "\n"; // Convert timestamp to readable date
+        outputFile << "Event name: " << event.get_name() << "\n";
+
+        // Truncate the description to 27 characters
+        std::string truncatedDescription = event.get_description().substr(0, 27);
+        if (event.get_description().length() > 27) {
+            truncatedDescription += "...";
+        }
+        outputFile << "Summary: " << truncatedDescription << "\n\n"; // Write the truncated description
+    }
+
+    std::cout << "Summary written to file: " << filePath << "\n";
+    outputFile.close();
+}
+
+
+std::string Frame::epochToDate(const int time) {
+    std::time_t epochTime = static_cast<std::time_t>(time);
+    std::tm* tm = std::localtime(&epochTime);
+    char buffer[20];
+    std::strftime(buffer, sizeof(buffer), "%d/%m/%y %H:%M", tm);
+    return std::string(buffer);
+}
+
+
