@@ -5,7 +5,7 @@
 #include "ConnectionHandler.h"
 #include "event.h" // Include the header file where the event structure is defined
 
-// Assuming the parseEventsFile function and names_and_events type are defined in event.h
+
 names_and_events parseEventsFile(const std::string& filePath);
 
 // Default constructor
@@ -20,7 +20,7 @@ Frame::Frame(const std::string& rawFrame) {
     std::string line;
     while (std::getline(stream, line) && !line.empty()) { //while theres a message
         size_t delimiter = line.find(':');
-        if (delimiter != std::string::npos) { //delimiter is found
+        if (delimiter != std::string::npos) { //delimiter is found (npos is the end of the string)
             std::string key = line.substr(0, delimiter);    //key is the first part of the line
             std::string value = line.substr(delimiter + 1); //value is the second part of the line
             headers[key] = value;                        //add the key and value to the headers
@@ -75,6 +75,7 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
 
     // Send frame using ConnectionHandler
     std::string frameString = connectFrame.toString(); // build the frame with tostring
+    
     if (!connectionHandler.sendLine(frameString)) { // send the frame and check if it was sent
         std::cerr << "Failed to send CONNECT frame.\n";
         shouldTerminate = true;
@@ -83,7 +84,17 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
 
 // Handle SUBSCRIBE frame
 void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
-   
+    // make sure no double-subs
+      if (mapChannelID.find(channelName) != mapChannelID.end()) {
+             std::cerr << "Channel \"" << channelName << "\" is already subscribed with ID: " << mapChannelID[channelName] << "\n";
+             return;
+    }
+    // Generate a unique subscription ID
+    int subscriptionId = subscriptionId++;
+
+    // Add the channel and ID to the map
+    mapChannelID[channelName] = subscriptionId;
+
     std::unordered_map<std::string, std::string> headers = {
         {"destination", "/" + channelName},
         {"id", std::to_string(subscriptionId++)},
@@ -100,7 +111,14 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
 
 // Handle UNSUBSCRIBE frame
 void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
-    static int receiptId = 1;
+    // **VALIDATION: Check if the client is subscribed to the channel**
+    if (mapChannelID.find(channelName) == mapChannelID.end()) {
+        std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\".\n";
+        return;
+    }
+
+    // Get the subscription ID
+    int subscriptionId = mapChannelID[channelName];
 
     std::unordered_map<std::string, std::string> headers = {
         {"id", channelName}, // Assume channelName as ID for simplicity???
@@ -123,10 +141,16 @@ void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string
     // Extract the channel name
     std::string channelName = parsedData.channel_name;
 
+    // **VALIDATION: Check if the client is subscribed to the channel**
+    if (mapChannelID.find(channelName) == mapChannelID.end()) {
+        std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\". Cannot send messages.\n";
+        return;
+    }
        // Save the parsed events
     for (const Event& event : parsedData.events) { //might not be necessery - maybe DELETE
         eventsStorage[event.get_date_time()] = event;
     }
+
     // Update the summary reports- keep track of the events reported by each user for each channel
     for (const Event& event : parsedData.events) {
 
@@ -178,9 +202,6 @@ void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string
             std::cerr << "Failed to send SEND frame for event: " << event.get_name() << "\n";
         }
     }
-}
-const std::map<int, Event>& Frame::geteventsStorage() const {
-    return eventsStorage;
 }
 
 // Handle DISCONNECT frame
@@ -274,4 +295,6 @@ std::string Frame::epochToDate(const int time) {
     return std::string(buffer);
 }
 
-
+const std::map<int, Event>& Frame::geteventsStorage() const {
+    return eventsStorage;
+}

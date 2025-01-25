@@ -20,10 +20,16 @@ bin/echoClient.o: src/echoClient.cpp | bin
 	g++ $(CFLAGS) -o bin/echoClient.o src/echoClient.cpp
 
 bin/event.o: src/event.cpp | bin
-	g++ $(CFLAGS) -o bin/event.o src/event.cpp
+    $(CXX) $(CXXFLAGS) -c -o bin/event.o src/event.cpp
 
 bin/StompClient.o: src/StompClient.cpp | bin
-	g++ $(CFLAGS) -o bin/StompClient.o src/StompClient.cpp
+    $(CXX) $(CXXFLAGS) -c -o bin/StompClient.o src/StompClient.cpp
+
+bin/StompProtocol.o: src/StompProtocol.cpp | bin
+    $(CXX) $(CXXFLAGS) -c -o bin/StompProtocol.o src/StompProtocol.cpp
+
+bin/Frame.o: src/Frame.cpp | bin
+    $(CXX) $(CXXFLAGS) -c -o bin/Frame.o src/Frame.cpp
 
 # Ensure bin directory exists
 bin:

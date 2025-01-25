@@ -3,6 +3,8 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include "Event.h" 
 
 class Frame {
 private:
@@ -11,20 +13,21 @@ private:
     std::string body;
     std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
     std::mutex reportsMutex; // locks reports map
+    std::unordered_map<std::string, int> mapChannelID; // Map channel names to IDs
+    
+    int subscriptionId = 1; // Keep track of subscription IDs
+    int receiptId = 1; // Keep track of receipt IDs
 public:
     // Constructors
     Frame(); // Default constructor
     Frame(const std::string& rawFrame); // Parse a raw frame
     Frame(const std::string& command, const std::unordered_map<std::string, std::string>& headers, const std::string& body);
-    int subscriptionId = 1; // Keep track of subscription IDs
-    int receiptId = 1; // Keep track of receipt IDs
-    std::map<int, Event> eventsStorage; // Store events for summary
-
+   
     // Getters
     std::string getCommand() const;
     std::string getHeader(const std::string& key) const;
     std::string getBody() const;
-    const std::map<int, Event>& geteventsStorage() const;
+
 
 
     // Frame operations
