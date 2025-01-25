@@ -10,6 +10,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 public class Reactor<T> implements Server<T> {
@@ -19,9 +20,11 @@ public class Reactor<T> implements Server<T> {
     private final Supplier<MessageEncoderDecoder<T>> readerFactory;
     private final ActorThreadPool pool;
     private Selector selector;
-
     private Thread selectorThread;
     private final ConcurrentLinkedQueue<Runnable> selectorTasks = new ConcurrentLinkedQueue<>();
+
+    private Connections<T> connections = new ConnectionsImpl<>();
+    private AtomicInteger connectionIdGenerator = new AtomicInteger(1);
 
     public Reactor(
             int numThreads,
@@ -37,6 +40,7 @@ public class Reactor<T> implements Server<T> {
 
     @Override
     public void serve() {
+        
 	selectorThread = Thread.currentThread();
         try (Selector selector = Selector.open();
                 ServerSocketChannel serverSock = ServerSocketChannel.open()) {
@@ -95,11 +99,15 @@ public class Reactor<T> implements Server<T> {
     private void handleAccept(ServerSocketChannel serverChan, Selector selector) throws IOException {
         SocketChannel clientChan = serverChan.accept();
         clientChan.configureBlocking(false);
+        int connectionId = connectionIdGenerator.getAndIncrement();
         final NonBlockingConnectionHandler<T> handler = new NonBlockingConnectionHandler<>(
                 readerFactory.get(),
                 protocolFactory.get(),
                 clientChan,
-                this);
+                this,
+                connectionId,
+                connections);
+        connections.addOrUpdateConnectionHandler(connectionId, (ConnectionHandler<T>) handler);
         clientChan.register(selector, SelectionKey.OP_READ, handler);
     }
 

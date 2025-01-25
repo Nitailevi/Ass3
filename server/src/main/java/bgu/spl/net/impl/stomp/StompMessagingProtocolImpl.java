@@ -1,6 +1,5 @@
 package bgu.spl.net.impl.stomp;
 import bgu.spl.net.api.StompMessagingProtocol;
-import bgu.spl.net.srv.ConnectionHandler;
 import bgu.spl.net.srv.Connections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -12,7 +11,6 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     private int connectionId;
     private Connections<String> connections;
     private AtomicBoolean error;
-    private ConnectionHandler<String> handler; // (new) allows access to the connection handler
 
     @Override
     public void start(int connectionId, Connections<String> connections){
@@ -57,8 +55,4 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         return shouldTerminate;
     }
 
-    @Override
-    public void setConnectionHandler(ConnectionHandler<String> ch) { // (new) to get access to the connection handler
-        handler = ch;
-    }
 }
