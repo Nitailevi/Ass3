@@ -3,16 +3,17 @@
 #include <iostream>
 #include <fstream>
 #include "ConnectionHandler.h"
-#include "event.h" // Include the header file where the event structure is defined
+#include <event.h>
 
 
-names_and_events parseEventsFile(const std::string& filePath);
+names_and_events parseEventsFile(const std::string& filePath); //used in report
 
 // Default constructor
-Frame::Frame() : command(""), body("") {}
+ Frame::Frame(StompProtocol& protocol) : command(""), headers(), body(""), protocol(protocol){}
+
 
 // Parse a raw frame = first line of frame
-Frame::Frame(const std::string& rawFrame) {
+Frame::Frame(const std::string& rawFrame, StompProtocol& protocol): protocol(protocol) {
     std::istringstream stream(rawFrame);
     std::getline(stream, command); // First line is the command
 
@@ -32,8 +33,8 @@ Frame::Frame(const std::string& rawFrame) {
 }
 
 // Construct a frame
-Frame::Frame(const std::string& command, const std::unordered_map<std::string, std::string>& headers, const std::string& body)
-    : command(command), headers(headers), body(body), subscriptionId(1), receiptId(1) {}
+Frame::Frame(const std::string& command, const std::unordered_map<std::string, std::string>& headers, const std::string& body, StompProtocol& protocol)
+    : command(command), headers(headers), body(body), protocol(protocol) {}
 
 // Getters
 std::string Frame::getCommand() const {
@@ -71,12 +72,13 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
         {"login", username},
         {"passcode", password}
     };
-    Frame connectFrame("CONNECT", headers, "");
+
+    Frame connectFrame("CONNECT", headers, "", protocol);
 
     // Send frame using ConnectionHandler
     std::string frameString = connectFrame.toString(); // build the frame with tostring
     
-    if (!connectionHandler.sendLine(frameString)) { // send the frame and check if it was sent
+    if (!connectionHandler.sendLine(frameString)) { // send the frame and check if it was sent- maybe DELETE
         std::cerr << "Failed to send CONNECT frame.\n";
         shouldTerminate = true;
     }
@@ -84,23 +86,31 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
 
 // Handle SUBSCRIBE frame
 void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
+   
     // make sure no double-subs
+    std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
       if (mapChannelID.find(channelName) != mapChannelID.end()) {
              std::cerr << "Channel \"" << channelName << "\" is already subscribed with ID: " << mapChannelID[channelName] << "\n";
              return;
     }
-    // Generate a unique subscription ID
-    int subscriptionId = subscriptionId++;
 
     // Add the channel and ID to the map
-    mapChannelID[channelName] = subscriptionId;
+    mapChannelID[channelName] = protocol.getSubscriptionId();
+    
+    protocol.setSubscriptionId(protocol.getSubscriptionId() + 1); // Increment the subscription ID
+    int subscriptionId = protocol.getSubscriptionId(); // Increment the subscription ID
+    
+    protocol.setReceiptSubscribe(protocol.getReceiptSubscribe() + 2);
+    int recieptsubscribe = protocol.getReceiptSubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"destination", "/" + channelName},
-        {"id", std::to_string(subscriptionId++)},
-        {"receipt", std::to_string(receiptId++)}
+        {"id", std::to_string(subscriptionId)}, // maybe need to wait for ticket?
+        {"receipt", std::to_string(recieptsubscribe)}
     };
-    Frame subscribeFrame("SUBSCRIBE", headers, "");
+     std::unordered_map<std::string, int> mapRecieptID = protocol.getMapRecieptID();
+    mapRecieptID[channelName] = recieptsubscribe;
+    Frame subscribeFrame("SUBSCRIBE", headers, "", protocol);
 
     // Send frame
     std::string frameString = subscribeFrame.toString();
@@ -111,6 +121,7 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
 
 // Handle UNSUBSCRIBE frame
 void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
+    std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
         std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\".\n";
@@ -120,10 +131,15 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     // Get the subscription ID
     int subscriptionId = mapChannelID[channelName];
 
+    protocol.setReceiptSubscribe(protocol.getReceiptSubscribe() + 2);
+    int recieptUnsubscribe = protocol.getReceiptSubscribe();
+
     std::unordered_map<std::string, std::string> headers = {
-        {"id", channelName}, // Assume channelName as ID for simplicity???
-        {"receipt", std::to_string(receiptId++)}
+        {"id", std::to_string(subscriptionId)}, 
+        {"receipt", std::to_string(recieptUnsubscribe)}
     };
+     std::unordered_map<std::string, int> mapRecieptID = protocol.getMapRecieptID();
+    mapRecieptID[channelName] = recieptUnsubscribe;
     Frame unsubscribeFrame("UNSUBSCRIBE", headers, "");
 
     // Send frame
@@ -141,22 +157,22 @@ void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string
     // Extract the channel name
     std::string channelName = parsedData.channel_name;
 
+    std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
+
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
         std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\". Cannot send messages.\n";
         return;
     }
-       // Save the parsed events
-    for (const Event& event : parsedData.events) { //might not be necessery - maybe DELETE
-        eventsStorage[event.get_date_time()] = event;
-    }
 
     // Update the summary reports- keep track of the events reported by each user for each channel
     for (const Event& event : parsedData.events) {
 
-        std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
+        std::lock_guard<std::mutex> lock(protocol.getReportsMutex()); // Ensure thread-safe access
        
         std::string eventOwnerUser = event.getEventOwnerUser();
+        std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
+        
         summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
 
         // Update statistics- based on gneeral info map
@@ -207,8 +223,12 @@ void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string
 // Handle DISCONNECT frame
 void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldTerminate) {
 
+    protocol.setReceiptUnsubscribe(protocol.getReceiptUnsubscribe() + 2);
+
+    int receiptId = protocol.getReceiptUnsubscribe();
+
     std::unordered_map<std::string, std::string> headers = {
-        {"receipt", std::to_string(receiptId++)}
+        {"receipt", std::to_string(receiptId)}
     };
     Frame disconnectFrame("DISCONNECT", headers, "");
 
@@ -231,8 +251,9 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
     }
 
     // Lock the reports map while accessing it- thread safe
-    std::lock_guard<std::mutex> lock(reportsMutex);
+    std::lock_guard<std::mutex> lock(protocol.getReportsMutex() );
 
+ std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
     // Check if the user and channel exist in the map
     if (reports.find(channelName) == reports.end() || reports[channelName].find(user) == reports[channelName].end()) { //end means non existant
         std::cerr << "No reports found for channel: " << channelName << " and user: " << user << "\n";
@@ -295,6 +316,3 @@ std::string Frame::epochToDate(const int time) {
     return std::string(buffer);
 }
 
-const std::map<int, Event>& Frame::geteventsStorage() const {
-    return eventsStorage;
-}

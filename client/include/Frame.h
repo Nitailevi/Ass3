@@ -4,24 +4,21 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "Event.h" 
+#include "event.h" 
+#include "StompProtocol.h"
 
 class Frame {
 private:
     std::string command;
     std::unordered_map<std::string, std::string> headers;
     std::string body;
-    std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
-    std::mutex reportsMutex; // locks reports map
-    std::unordered_map<std::string, int> mapChannelID; // Map channel names to IDs
-    
-    int subscriptionId = 1; // Keep track of subscription IDs
-    int receiptId = 1; // Keep track of receipt IDs
+     StompProtocol& protocol;
+ 
 public:
     // Constructors
-    Frame(); // Default constructor
-    Frame(const std::string& rawFrame); // Parse a raw frame
-    Frame(const std::string& command, const std::unordered_map<std::string, std::string>& headers, const std::string& body);
+    Frame(StompProtocol& protocol); // Default constructor
+    Frame(const std::string& rawFrame, StompProtocol& protocol); // Parse a raw frame
+    Frame(const std::string& command, const std::unordered_map<std::string, std::string>& headers, const std::string& body, StompProtocol& protocol); // Construct a frame
    
     // Getters
     std::string getCommand() const;
