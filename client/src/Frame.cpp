@@ -140,7 +140,7 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     };
      std::unordered_map<std::string, int> mapRecieptID = protocol.getMapRecieptID();
     mapRecieptID[channelName] = recieptUnsubscribe;
-    Frame unsubscribeFrame("UNSUBSCRIBE", headers, "");
+    Frame unsubscribeFrame("UNSUBSCRIBE", headers, "", protocol) ;
 
     // Send frame
     std::string frameString = unsubscribeFrame.toString();
@@ -212,7 +212,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string
         body += "description:\n" + event.get_description() + "\n";
 
         // Create and send the SEND frame
-        Frame finishedFrame("SEND", headers, body);
+        Frame finishedFrame("SEND", headers, body, protocol);
         std::string frameString = finishedFrame.toString();
         if (!connectionHandler.sendLine(frameString)) {
             std::cerr << "Failed to send SEND frame for event: " << event.get_name() << "\n";
@@ -230,7 +230,7 @@ void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldT
     std::unordered_map<std::string, std::string> headers = {
         {"receipt", std::to_string(receiptId)}
     };
-    Frame disconnectFrame("DISCONNECT", headers, "");
+    Frame disconnectFrame("DISCONNECT", headers, "", protocol);
 
     // Send frame
     std::string frameString = disconnectFrame.toString();

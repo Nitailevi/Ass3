@@ -4,7 +4,7 @@
 #include "Frame.h"
 
 StompProtocol::StompProtocol(ConnectionHandler& connectionHandler)
-    : shouldTerminate(false), connectionHandler(connectionHandler) {}
+    : shouldTerminate(false), connectionHandler(connectionHandler), frameHandler(frameHandler) {}
 
 void StompProtocol::processCommand(const std::string& command) {
     std::istringstream iss(command); // allows going word by word
