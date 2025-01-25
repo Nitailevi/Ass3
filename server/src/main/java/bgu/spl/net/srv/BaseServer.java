@@ -17,6 +17,7 @@ public abstract class BaseServer<T> implements Server<T> {
     private Connections<T> connections = new ConnectionsImpl<>();
     private AtomicInteger connectionIdGenerator = new AtomicInteger(1);
 
+
     public BaseServer(
             int port,
             Supplier<MessagingProtocol<T>> protocolFactory,
@@ -27,6 +28,7 @@ public abstract class BaseServer<T> implements Server<T> {
         this.encdecFactory = encdecFactory;
 		this.sock = null;
         }
+
 
     @Override
     public void serve() {
