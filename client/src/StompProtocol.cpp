@@ -45,7 +45,33 @@ void StompProtocol::processServerResponse(const std::string& response) {
     std::string command = frame.getCommand();
 
     if (command == "MESSAGE") {
-        std::cout << "Received message: " << frame.getBody() << "\n";
+           // Update the summary reports- keep track of the events reported by each user for each channel
+    
+        Event event(response); // Parse the event from the frame body
+        std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
+       
+        std::string eventOwnerUser = event.getEventOwnerUser();
+        std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
+        
+        summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
+
+        // Update statistics- based on gneeral info map
+        report.totalReports++; // update count
+        if (event.get_general_information().at("active") == "true") {
+            report.activeCount++; // update count
+        }
+        if (event.get_general_information().at("forces_arrival_at_scene") == "true") {
+            report.forcesArrivalCount++; // update count
+        }
+
+        // Add the event
+        report.events.push_back(event);
+
+    
+
+
+
+
     } else if (command == "RECEIPT") { // after join channel i sent recieptId. the server sends back a recieptId- need to check in map which channel - by odd and even
 
         std::cout << "Operation acknowledged: " << frame.getHeader("receipt-id") << "\n";
