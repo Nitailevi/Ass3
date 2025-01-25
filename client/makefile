@@ -31,6 +31,14 @@ bin/StompProtocol.o: src/StompProtocol.cpp | bin
 bin/Frame.o: src/Frame.cpp | bin
     $(CXX) $(CXXFLAGS) -c -o bin/Frame.o src/Frame.cpp
 
+
+g++ -I/root/Ass3/client/include -o Frame /root/Ass3/client/src/Frame.cpp
+g++ -I/root/Ass3/client/include -o StompProtocol /root/Ass3/client/src/StompProtocol.cpp
+g++ -I/root/Ass3/client/include -o StompClient /root/Ass3/client/src/StompClient
+g++ -I/root/Ass3/client/include -o ConnectionHandler /root/Ass3/client/src/ConnectionHandler
+g++ -I/root/Ass3/client/include -o event /root/Ass3/client/src/event.cpp
+
+
 # Ensure bin directory exists
 bin:
 	mkdir -p bin

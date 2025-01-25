@@ -3,6 +3,7 @@
 #include <atomic>
 #include "ConnectionHandler.h"
 #include "StompProtocol.h"
+#include "Frame.h"
 
 //rule of 5???
 void keyboardInputHandler(StompProtocol& protocol, std::atomic<bool>& shouldTerminate) {
@@ -10,7 +11,7 @@ void keyboardInputHandler(StompProtocol& protocol, std::atomic<bool>& shouldTerm
     while (!shouldTerminate) {
         std::getline(std::cin, command); //get command
         protocol.processCommand(command);
-        if (protocol.shouldTerminateProtocol()) {
+        if (protocol.getShouldTerminate()) {
             shouldTerminate = true;
         }
     }
@@ -25,7 +26,7 @@ void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& 
             break;
         }
         protocol.processServerResponse(response);  //process the response
-        if (protocol.shouldTerminateProtocol()) {
+        if (protocol.getShouldTerminate()) {
             shouldTerminate = true;
         }
     }
