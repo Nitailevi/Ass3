@@ -31,7 +31,7 @@ public:
     void handleConnect(class ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, bool& shouldTerminate);
     void handleSubscribe(class ConnectionHandler& connectionHandler, const std::string& channelName);
     void handleUnsubscribe(class ConnectionHandler& connectionHandler, const std::string& channelName);
-    void handleReport(class ConnectionHandler& connectionHandler, const std::string& filePath);
+    void handleReport(class ConnectionHandler& connectionHandler, std::string json_path);
     void handleDisconnect(class ConnectionHandler& connectionHandler, bool& shouldTerminate);
     void handleError(class ConnectionHandler& connectionHandler, const std::string& errorMessage);
     void handleSummary(const std::string& channelName, const std::string& user, const std::string& filePath);

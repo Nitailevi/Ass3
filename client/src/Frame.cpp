@@ -6,7 +6,7 @@
 #include <event.h>
 
 
-names_and_events parseEventsFile(const std::string& filePath); //used in report
+
 
 // Default constructor
  Frame::Frame(StompProtocol& protocol) : command(""), headers(), body(""), protocol(protocol){}
@@ -148,12 +148,11 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
         std::cerr << "Failed to send UNSUBSCRIBE frame.\n";
     }
 }
-
+names_and_events parseEventsFile(std::string json_path); //used in report
 // Handle REPORT (SEND frames for multiple events)
-void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string& filePath) {
+void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_path) {
     // Parse the events file using the provided parser
-    names_and_events parsedData = static_cast<names_and_events(*)(const std::string&)>(parseEventsFile)(filePath);
-
+    names_and_events parsedData = parseEventsFile(json_path);
     // Extract the channel name
     std::string channelName = parsedData.channel_name;
 
@@ -165,35 +164,12 @@ void Frame::handleReport(ConnectionHandler& connectionHandler, const std::string
         return;
     }
 
-    // Update the summary reports- keep track of the events reported by each user for each channel
-    for (const Event& event : parsedData.events) {
 
-        std::lock_guard<std::mutex> lock(protocol.getReportsMutex()); // Ensure thread-safe access
-       
-        std::string eventOwnerUser = event.getEventOwnerUser();
-        std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
-        
-        summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
-
-        // Update statistics- based on gneeral info map
-        report.totalReports++; // update count
-        if (event.get_general_information().at("active") == "true") {
-            report.activeCount++; // update count
-        }
-        if (event.get_general_information().at("forces_arrival_at_scene") == "true") {
-            report.forcesArrivalCount++; // update count
-        }
-
-        // Add the event
-        report.events.push_back(event);
-
-    }
     // Loop through each event and send it as a SEND frame
     for (const Event& event : parsedData.events) {
         // Build the SEND frame headers
         std::unordered_map<std::string, std::string> headers = {
-            {"destination", "/" + channelName},    // Use the parsed channel name
-            {"content-type", "text/plain"}         // Indicate plain text message
+            {"destination",  channelName},    // Use the parsed channel name
         };
 
         // Format the event body according to the specified report format
@@ -294,7 +270,7 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
         outputFile << "City: " << event.get_city() << "\n";
         outputFile << "Date time: " << epochToDate(event.get_date_time()) << "\n"; // Convert timestamp to readable date
         outputFile << "Event name: " << event.get_name() << "\n";
-
+        
         // Truncate the description to 27 characters
         std::string truncatedDescription = event.get_description().substr(0, 27);
         if (event.get_description().length() > 27) {
