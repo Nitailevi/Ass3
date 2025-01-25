@@ -99,7 +99,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
             return "no error";  
         }
     }
-    public Map<Integer, ConnectionHandler> getActiveClients() {
-        return activeClients;
+    public void addOrUpdateConnectionHandler(int connectionId, ConnectionHandler<T> handler) {
+        activeClients.put(connectionId, handler);
     }
 }

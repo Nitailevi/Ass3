@@ -1,6 +1,7 @@
 package bgu.spl.net.srv;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.function.Function;
 
 public interface Connections<T> {
@@ -15,5 +16,6 @@ public interface Connections<T> {
     void subscribe(String channel, int connectionId, String subscriberId);
     void unsubscribe(String subscriberId, int connectionId);
     String authenticate(String login, String passcode, int connectionId);
+    void addOrUpdateConnectionHandler(int connectionId, ConnectionHandler<T> handler);
 
 }
