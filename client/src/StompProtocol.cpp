@@ -64,7 +64,7 @@ void StompProtocol::processServerResponse(const std::string& response) {
             report.forcesArrivalCount++; // update count
         }
 
-        // Add the event
+        // Add the curr event  to the vector of events
         report.events.push_back(event);
 
     
@@ -88,7 +88,7 @@ void StompProtocol::processServerResponse(const std::string& response) {
 
 
 // Getter functions implementation
-const std::map<std::string, std::map<std::string, SummaryReport>>& StompProtocol::getReports() const {
+const std::map<std::string, std::map<std::string, summaryReport>>& StompProtocol::getReports() const {
     return reports;
 }
 
