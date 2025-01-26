@@ -14,11 +14,11 @@ private:
     std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
     std::mutex reportsMutex; // locks reports map
     std::unordered_map<std::string, int> mapChannelID; // Map channel names to IDs
-    std::unordered_map<std::string, int> mapRecieptID;
+    std::unordered_map<std::string, int> mapRecieptID; // Map   
 
     int subscriptionId = 1; // Keep track of subscription IDs
-    int receiptUnsubscribe = 1; // Keep track of receipt IDs
-    int receiptsubscribe = 2;
+    int receiptUnsubscribe = 1; // odd
+    int receiptsubscribe = 2; //even
 public:
     StompProtocol(ConnectionHandler& connectionHandler); // Constructor
 
@@ -36,7 +36,7 @@ public:
     bool shouldTerminateProtocol() const;
 
     //getters
-    const std::map<std::string, std::map<std::string, summaryReport>>& getReports() const;
+    const std::map<std::string, std::map<std::string, summaryReport>>& getReports() const; ;
     const std::unordered_map<std::string, int>& getMapChannelID() const;
     const std::unordered_map<std::string, int>& getMapRecieptID() const;
     int getSubscriptionId() const;
@@ -51,5 +51,10 @@ public:
     void setReceiptUnsubscribe(int id);
     void setReceiptSubscribe(int id);
 };
-
+struct summaryReport { //structure ment to keep track of events reported by User X for channel Y
+    int totalReports = 0;                      // Total number of events reported
+    int activeCount = 0;                       // Count of active events
+    int forcesArrivalCount = 0;                // Count of events with forces arrival
+    std::vector<Event> events;                 // List of all events for the user
+};
 #endif // STOMPPROTOCOL_H

@@ -147,9 +147,10 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     if (!connectionHandler.sendLine(frameString)) {
         std::cerr << "Failed to send UNSUBSCRIBE frame.\n";
     }
+    std::cout << "Exited channel " << channelName << std::endl;
 }
-names_and_events parseEventsFile(std::string json_path); //used in report
-// Handle REPORT (SEND frames for multiple events)
+    names_and_events parseEventsFile(std::string json_path); //used in report
+    // Handle REPORT (SEND frames for multiple events)
 void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_path) {
     // Parse the events file using the provided parser
     names_and_events parsedData = parseEventsFile(json_path);
@@ -194,6 +195,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
             std::cerr << "Failed to send SEND frame for event: " << event.get_name() << "\n";
         }
     }
+    std::cout << "Reported" << channelName << std::endl;
 }
 
 // Handle DISCONNECT frame
@@ -216,7 +218,8 @@ void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldT
      // Close the socket
     connectionHandler.close(); // might not be necessery- maybe better in main
     shouldTerminate = true; // Signal protocol termination
-}
+     std::cout << " Logged out" << std::endl;
+}   
 //handle  summary
 void Frame::handleSummary(const std::string& channelName, const std::string& user, const std::string& filePath) {
     // Open or create the output file
@@ -225,7 +228,12 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
         std::cerr << "Failed to open file: " << filePath << " for writing.\n";
         return;
     }
+        std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
 
+     if (mapChannelID.find(channelName) != mapChannelID.end()) {
+             std::cerr <<  "you are not subscribed to channel" + channelName << "\n";
+             return;
+     }
     // Lock the reports map while accessing it- thread safe
     std::lock_guard<std::mutex> lock(protocol.getReportsMutex() );
 
@@ -272,11 +280,11 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
         outputFile << "Event name: " << event.get_name() << "\n";
         
         // Truncate the description to 27 characters
-        std::string truncatedDescription = event.get_description().substr(0, 27);
+        std::string description = event.get_description().substr(0, 27);
         if (event.get_description().length() > 27) {
-            truncatedDescription += "...";
+            description += "...";
         }
-        outputFile << "Summary: " << truncatedDescription << "\n\n"; // Write the truncated description
+        outputFile << "Summary: " << description << "\n\n"; // Write the truncated description
     }
 
     std::cout << "Summary written to file: " << filePath << "\n";

@@ -6,7 +6,7 @@
 StompProtocol::StompProtocol(ConnectionHandler& connectionHandler)
     : shouldTerminate(false), connectionHandler(connectionHandler), frameHandler(frameHandler) {}
 
-void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& username, const std::string& password){
+void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& username, const std::string& password){ 
     frameHandler.handleConnect(connectionHandler, hostPort, username, password, shouldTerminate);
 }
 
@@ -52,8 +52,8 @@ void StompProtocol::processServerResponse(const std::string& response) {
         Event event(response); // Parse the event from the frame body
         std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
        
+        std::string channelName = event.get_channel_name();
         std::string eventOwnerUser = event.getEventOwnerUser();
-        std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
         
         summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
 
@@ -66,21 +66,24 @@ void StompProtocol::processServerResponse(const std::string& response) {
             report.forcesArrivalCount++; // update count
         }
 
-        // Add the event
+        // Add the curr event  to the vector of events
         report.events.push_back(event);
-
-    
-
-
-
 
     } else if (command == "RECEIPT") { // after join channel i sent recieptId. the server sends back a recieptId- need to check in map which channel - by odd and even
 
-        std::cout << "Operation acknowledged: " << frame.getHeader("receipt-id") << "\n";
+        if (std::stoi(frame.getHeader("receipt-id")) % 2 == 0) {
+            std::cout << "Joined channel : " << frame.getHeader("receipt-id") << "\n";
+            mapChannelID[frame.getHeader("receipt-id")] = subscriptionId;
+            subscriptionId++;
+        } else if (std::stoi(frame.getHeader("receipt-id")) % 2 == 1) {
+            std::cout << "Exited channel : " << frame.getHeader("receipt-id") << "\n";
+        } else {
+            std::cerr << "Unknown receipt ID: " << frame.getHeader("receipt-id") << "\n";
+        }
 
 
     } else if (command == "ERROR") {
-        std::cerr << "Error from server: " << frame.getBody() << "\n";
+        std::cerr << "Error from server: " << "\n" << "\n"<< "Error"<< "'n" << "message :" +frame.getBody() << "\n";
      } else if (command == "CONNECTED") {
         std::cout << "Login Successful "<< "\n";
     } else {
@@ -90,7 +93,7 @@ void StompProtocol::processServerResponse(const std::string& response) {
 
 
 // Getter functions implementation
-const std::map<std::string, std::map<std::string, SummaryReport>>& StompProtocol::getReports() const {
+ const std::map<std::string, std::map<std::string, summaryReport>>& StompProtocol::getReports() const {
     return reports;
 }
 
