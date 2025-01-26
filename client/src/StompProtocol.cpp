@@ -6,16 +6,20 @@
 StompProtocol::StompProtocol(ConnectionHandler& connectionHandler)
     : shouldTerminate(false), connectionHandler(connectionHandler), frameHandler(frameHandler) {}
 
+void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& username, const std::string& password){
+    frameHandler.handleConnect(connectionHandler, hostPort, username, password, shouldTerminate);
+}
+
+void StompProtocol:: sendLogoutFrame(){
+    frameHandler.handleDisconnect(connectionHandler,shouldTerminate);
+}
+
 void StompProtocol::processCommand(const std::string& command) {
     std::istringstream iss(command); // allows going word by word
     std::string action;
     iss >> action; //first word
     
-    if (action == "login") {
-        std::string hostPort, username, password;
-        iss >> hostPort >> username >> password;
-        frameHandler.handleConnect(connectionHandler, hostPort, username, password, shouldTerminate);
-    } else if (action == "join") {
+    if (action == "join") {
         std::string channelName;
         iss >> channelName;
         frameHandler.handleSubscribe(connectionHandler, channelName);
@@ -27,8 +31,6 @@ void StompProtocol::processCommand(const std::string& command) {
         std::string filePath;
         iss >> filePath;
         frameHandler.handleReport(connectionHandler, filePath);
-    } else if (action == "logout") {
-        frameHandler.handleDisconnect(connectionHandler, shouldTerminate);
     }
     else if (action == "summary") {
     std::string channelName, user, filePath;
@@ -36,7 +38,7 @@ void StompProtocol::processCommand(const std::string& command) {
     frameHandler.handleSummary(channelName, user, filePath);
     }
     else {
-        std::cout << "Unknown command: " << action << "\n";
+        std::cout << "Illegal command, please try a different one" << "\n"; 
     }
 }
 

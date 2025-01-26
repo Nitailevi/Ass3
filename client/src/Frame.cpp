@@ -90,17 +90,17 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
     // make sure no double-subs
     std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
       if (mapChannelID.find(channelName) != mapChannelID.end()) {
-             std::cerr << "Channel \"" << channelName << "\" is already subscribed with ID: " << mapChannelID[channelName] << "\n";
+             std::cerr << "Channel \"" << channelName << "\" is already subscribed with ID: " << mapChannelID[channelName] << "\n";  //check what to print
              return;
-    }
+        }
 
     // Add the channel and ID to the map
     mapChannelID[channelName] = protocol.getSubscriptionId();
     
-    protocol.setSubscriptionId(protocol.getSubscriptionId() + 1); // Increment the subscription ID
+    protocol.setSubscriptionId(protocol.getSubscriptionId() + 1); // Increment the subscription ID  // can do a method of get and increament
     int subscriptionId = protocol.getSubscriptionId(); // Increment the subscription ID
     
-    protocol.setReceiptSubscribe(protocol.getReceiptSubscribe() + 2);
+    protocol.setReceiptSubscribe(protocol.getReceiptSubscribe() + 2); // can do a method of get and increament
     int recieptsubscribe = protocol.getReceiptSubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
