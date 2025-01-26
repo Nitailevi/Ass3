@@ -50,8 +50,8 @@ void StompProtocol::processServerResponse(const std::string& response) {
         Event event(response); // Parse the event from the frame body
         std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
        
+        std::string channelName = event.get_channel_name();
         std::string eventOwnerUser = event.getEventOwnerUser();
-        std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
         
         summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
 

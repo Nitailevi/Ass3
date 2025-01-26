@@ -47,5 +47,10 @@ public:
     void setReceiptUnsubscribe(int id);
     void setReceiptSubscribe(int id);
 };
-
+struct summaryReport { //structure ment to keep track of events reported by User X for channel Y
+    int totalReports = 0;                      // Total number of events reported
+    int activeCount = 0;                       // Count of active events
+    int forcesArrivalCount = 0;                // Count of events with forces arrival
+    std::vector<Event> events;                 // List of all events for the user
+};
 #endif // STOMPPROTOCOL_H
