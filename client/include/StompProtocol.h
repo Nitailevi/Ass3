@@ -22,6 +22,10 @@ private:
 public:
     StompProtocol(ConnectionHandler& connectionHandler); // Constructor
 
+    void sendLoginFrame(const std::string& hostPort, const std::string& username, const std::string& password);
+
+    void sendLogoutFrame();
+
     // Process user commands like `login`, `join`, `report`, etc.
     void processCommand(const std::string& command);
 

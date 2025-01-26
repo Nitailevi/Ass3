@@ -5,17 +5,6 @@
 #include "StompProtocol.h"
 #include "Frame.h"
 
-//rule of 5???
-void keyboardInputHandler(StompProtocol& protocol, std::atomic<bool>& shouldTerminate) {
-    std::string command;
-    while (!shouldTerminate) {
-        std::getline(std::cin, command); //get command
-        protocol.processCommand(command);
-        if (protocol.getShouldTerminate()) {
-            shouldTerminate = true;
-        }
-    }
-}
 
 void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& protocol, std::atomic<bool>& shouldTerminate) {
     while (!shouldTerminate) { 
@@ -32,30 +21,70 @@ void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& 
     }
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <host> <port>\n";
-        return 1;
-    }
+int main() {
 
-    std::string host = argv[1];
-    short port = std::stoi(argv[2]);
-
-    ConnectionHandler connectionHandler(host, port);
-    if (!connectionHandler.connect()) { //connect to the server
-        std::cerr << "Failed to connect to " << host << ":" << port << "\n";
-        return 1;
-    }
-
-    StompProtocol protocol(connectionHandler);
     std::atomic<bool> shouldTerminate(false);
-   
-    // init threads
-    std::thread keyboardThread(keyboardInputHandler, std::ref(protocol), std::ref(shouldTerminate));
-    std::thread serverThread(serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(shouldTerminate));
-    //synch with main
-    keyboardThread.join();
-    serverThread.join();
+    bool loggedIn = false;
+    std::thread serverThread;
+    
+    while (!shouldTerminate) {
+        std::string command;
+        std::getline(std::cin, command);
+        std::istringstream iss(command); // allows going word by word
+        std::string action;
+        iss >> action; //first word
 
+        if (action == "login") {
+            if (loggedIn) {
+                std::cout << "user already logedin" << std::endl;
+                continue;
+            }
+            std::string hostPort, login, passcode;
+            if (!(iss >> hostPort >> login >> passcode)) {
+                std::cout << "login command needs 3 args: {host:port} {username} {password}"<< std::endl;
+                continue;
+            }
+            size_t colonPos = hostPort.find(':');
+            if (colonPos == std::string::npos) {
+                std::cout << "host:port are illegal"<< std::endl;
+                continue;
+            }
+            std::string host = hostPort.substr(0, colonPos);
+            int port = std::stoi(hostPort.substr(colonPos + 1));
+
+            ConnectionHandler connectionHandler(host, port);
+            if (!connectionHandler.connect()) { //connect to the server
+                std::cout <<"Connection failed (Error: Invalid argument)\n" "Cannot connect to " << host << ":" << port << "please try to login again"<< std::endl;
+                continue;
+            }
+
+            StompProtocol protocol(connectionHandler);
+            protocol.sendLoginFrame(hostPort, login, passcode);
+
+            std::thread serverThread (serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(shouldTerminate));
+            loggedIn = true;
+
+            while (!shouldTerminate) { 
+                std::getline(std::cin, command);
+                if (command == "logout") {
+                    protocol.sendLogoutFrame(); 
+                    shouldTerminate = true; 
+                    loggedIn = false;
+                } else {
+                    protocol.processCommand(command);
+                }
+            }
+
+            if (serverThread.joinable())
+                serverThread.join();
+
+        } else if (!loggedIn) {
+            std::cout << "please login first" << std::endl;
+            continue;
+        }
+
+       if (serverThread.joinable())
+           serverThread.join();
+    }
     return 0;
 }

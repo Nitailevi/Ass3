@@ -12,7 +12,7 @@ private:
     std::string command;
     std::unordered_map<std::string, std::string> headers;
     std::string body;
-     StompProtocol& protocol;
+    StompProtocol& protocol;
  
 public:
     // Constructors
