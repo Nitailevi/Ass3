@@ -35,6 +35,7 @@ int main() {
         iss >> action; //first word
 
         if (action == "login") {
+           
             if (loggedIn) {
                 std::cout << "user already logedin" << std::endl;
                 continue;
@@ -44,6 +45,7 @@ int main() {
                 std::cout << "login command needs 3 args: {host:port} {username} {password}"<< std::endl;
                 continue;
             }
+            
             size_t colonPos = hostPort.find(':');
             if (colonPos == std::string::npos) {
                 std::cout << "host:port are illegal"<< std::endl;
@@ -52,6 +54,7 @@ int main() {
             std::string host = hostPort.substr(0, colonPos);
             int port = std::stoi(hostPort.substr(colonPos + 1));
 
+             std::cout << "Starting to connect to " << hostPort << std::endl;
             ConnectionHandler connectionHandler(host, port);
             if (!connectionHandler.connect()) { //connect to the server
                 std::cout <<"Connection failed (Error: Invalid argument)\n" "Cannot connect to " << host << ":" << port << "please try to login again"<< std::endl;
@@ -63,6 +66,7 @@ int main() {
 
             std::thread serverThread (serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(shouldTerminate));
             loggedIn = true;
+             std::cout <<"Login successful";
 
             while (!shouldTerminate) { 
                 std::getline(std::cin, command);
@@ -82,6 +86,7 @@ int main() {
             std::cout << "please login first" << std::endl;
             continue;
         }
+        
 
        if (serverThread.joinable())
            serverThread.join();
