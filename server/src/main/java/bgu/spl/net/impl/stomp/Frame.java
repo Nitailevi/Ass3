@@ -40,6 +40,7 @@ public class Frame {
         switch (command) {
             case "CONNECT":
                 handleConnect();
+                System.out.println("handleFrame "+command);
                 break;
             case "SEND":
                 handleSend();

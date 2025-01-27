@@ -1,23 +1,25 @@
-CFLAGS := -c -Wall -Weffc++ -g -std=c++11 -Iinclude
-LDFLAGS := -lboost_system -lpthread
+all: clean compile link run
 
-all: StompWCIClient
+# Linking step
+link:
+	g++ -o bin/StompClient bin/ConnectionHandler.o bin/event.o bin/StompClient.o bin/StompProtocol.o bin/Frame.o -lpthread
 
-StompWCIClient: bin/ConnectionHandler.o bin/StompClient.o bin/event.o
-	g++ -o bin/StompWCIClient bin/ConnectionHandler.o bin/StompClient.o bin/event.o $(LDFLAGS)
+# Compilation step
+compile:
+	g++ -g -Wall -Weffc++ -std=c++11 -Iinclude -c -o bin/ConnectionHandler.o src/ConnectionHandler.cpp
+	g++ -g -Wall -Weffc++ -std=c++11 -Iinclude -c -o bin/event.o src/event.cpp
+	g++ -g -Wall -Weffc++ -std=c++11 -Iinclude -c -o bin/StompClient.o src/StompClient.cpp
+	g++ -g -Wall -Weffc++ -std=c++11 -Iinclude -c -o bin/StompProtocol.o src/StompProtocol.cpp
+	g++ -g -Wall -Weffc++ -std=c++11 -Iinclude -c -o bin/Frame.o src/Frame.cpp
 
-bin/StompClient.o: src/StompClient.cpp | bin
-	g++ $(CFLAGS) -o bin/StompClient.o src/StompClient.cpp
-
-bin/event.o: src/event.cpp | bin
-	g++ $(CFLAGS) -o bin/event.o src/event.cpp
-
-bin/ConnectionHandler.o: src/ConnectionHandler.cpp | bin
-	g++ $(CFLAGS) -o bin/ConnectionHandler.o src/ConnectionHandler.cpp
-
-bin:
-	mkdir -p bin
-
-.PHONY: clean
+# Cleaning step
 clean:
-	rm -f bin/*.o bin/StompWCIClient
+	rm -f bin/*
+
+# Run the compiled program
+run:
+	./bin/StompClient
+
+# Run the program with Valgrind
+c: all
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./bin/simulation config_file.txt

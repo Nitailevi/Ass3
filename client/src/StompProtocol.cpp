@@ -1,15 +1,24 @@
-#include "StompProtocol.h"
 #include <iostream>
 #include <sstream>
-#include "event.h"
-#include "Frame.h"
+#include "../include/StompProtocol.h"
+#include "../include/event.h"
+#include "../include/Frame.h"
 
-StompProtocol::StompProtocol(ConnectionHandler& connectionHandler)
-    : shouldTerminate(false), connectionHandler(connectionHandler) {}
 
-void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& username, const std::string& password){ 
+StompProtocol::StompProtocol(ConnectionHandler& handler)
+    : shouldTerminate(false),
+      connectionHandler(handler),
+      reports(),
+      reportsMutex(),
+      mapChannelID(),
+      mapRecieptID(),
+      subscriptionId(1),
+      receiptUnsubscribe(1),
+      receiptsubscribe(2){}
+
+void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& login, const std::string& passcode){ 
     Frame frame(*this);
-    frame.handleConnect(connectionHandler, hostPort, username, password, shouldTerminate);
+    frame.handleConnect(connectionHandler, hostPort, login, passcode, shouldTerminate);
 }
 
 void StompProtocol:: sendLogoutFrame(){
@@ -90,7 +99,8 @@ void StompProtocol::processServerResponse(const std::string& response) {
 
 
     } else if (command == "ERROR") {
-        std::cerr << "Error from server: " << "\n" << "\n"<< "Error"<< "'n" << "message :" +frame.getBody() << "\n";
+        std::cerr << "ERROR FROM SERVER" << "\n" << "\n"<< "ERROR"<< "\n" << "message:" +frame.getBody() << "\n";
+        shouldTerminate = true;
      } else if (command == "CONNECTED") {
         std::cout << "Login Successful "<< "\n";
     } else {

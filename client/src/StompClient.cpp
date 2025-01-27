@@ -1,12 +1,11 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
-#include "ConnectionHandler.h"
-#include "StompProtocol.h"
-#include "Frame.h"
+#include "../include/ConnectionHandler.h"
+#include "../include/StompProtocol.h"
+#include "../include/Frame.h"
 
-
-void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& protocol, std::atomic<bool>& shouldTerminate) {
+    void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& protocol, std::atomic<bool>& shouldTerminate) {
     while (!shouldTerminate) { 
         std::string response;
         if (!connectionHandler.getLine(response)) { //check if the connection is still open
@@ -22,7 +21,6 @@ void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& 
 }
 
 int main() {
-
     std::atomic<bool> shouldTerminate(false);
     bool loggedIn = false;
     std::thread serverThread;
@@ -66,7 +64,6 @@ int main() {
 
             std::thread serverThread (serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(shouldTerminate));
             loggedIn = true;
-             std::cout <<"Login successful";
 
             while (!shouldTerminate) { 
                 std::getline(std::cin, command);

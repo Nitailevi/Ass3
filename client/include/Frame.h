@@ -25,7 +25,8 @@ public:
     std::string getHeader(const std::string& key) const;
     std::string getBody() const;
 
-
+    // Convert to string (for sending frames)
+    std::string toString() const;
 
     // Frame operations
     void handleConnect(class ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, bool& shouldTerminate);
@@ -33,12 +34,9 @@ public:
     void handleUnsubscribe(class ConnectionHandler& connectionHandler, const std::string& channelName);
     void handleReport(class ConnectionHandler& connectionHandler, std::string json_path);
     void handleDisconnect(class ConnectionHandler& connectionHandler, bool& shouldTerminate);
-    void handleError(class ConnectionHandler& connectionHandler, const std::string& errorMessage);
     void handleSummary(const std::string& channelName, const std::string& user, const std::string& filePath);
     std::string epochToDate(const int time);
 
-    // Convert to string (for sending frames)
-    std::string toString() const;
 };
 // struct summaryReport { //structure ment to keep track of events reported by User X for channel Y
 //     int totalReports = 0;                      // Total number of events reported

@@ -1,10 +1,10 @@
-#include "Frame.h"
+#include "../include/Frame.h"
 #include <sstream>
 #include <iostream>
 #include <fstream>
-#include "ConnectionHandler.h"
-#include "event.h"
-#include "StompProtocol.h"
+#include "../include/ConnectionHandler.h"
+#include "../include/event.h"
+#include "../include/StompProtocol.h"
 
 
 
@@ -69,7 +69,7 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
     // Build CONNECT frame
     std::unordered_map<std::string, std::string> headers = {
         {"accept-version", "1.2"},
-        {"host", hostPort},
+        {"host", "stomp.cs.bgu.ac.il"},
         {"login", username},
         {"passcode", password}
     };
@@ -82,6 +82,10 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
     if (!connectionHandler.sendLine(frameString)) { // send the frame and check if it was sent- maybe DELETE
         std::cerr << "Failed to send CONNECT frame.\n";
         shouldTerminate = true;
+    }
+    else {
+        std::cout << "Connected to " << hostPort << std::endl;
+        std::cout <<frameString<< std::endl;
     }
 }
 
@@ -150,7 +154,10 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     }
     std::cout << "Exited channel " << channelName << std::endl;
 }
-    names_and_events parseEventsFile(std::string json_path); //used in report
+    
+    
+    //names_and_events parseEventsFile(std::string json_path); //used in report
+
     // Handle REPORT (SEND frames for multiple events)
 void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_path) {
     // Parse the events file using the provided parser
@@ -182,8 +189,8 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
                            "general information:\n";
 
         // Add general information to the body
-        for (const auto& [key, value] : event.get_general_information()) {
-            body += key + ": " + value + "\n";
+        for (const auto& pair : event.get_general_information()) {
+            body += pair.first + ": " + pair.second + "\n";
         }
 
         // Add the description to the body
@@ -221,6 +228,8 @@ void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldT
     shouldTerminate = true; // Signal protocol termination
      std::cout << " Logged out" << std::endl;
 }   
+
+
 //handle  summary
 void Frame::handleSummary(const std::string& channelName, const std::string& user, const std::string& filePath) {
     // Open or create the output file
