@@ -2,14 +2,20 @@
 #define STOMPPROTOCOL_H
 
 #include <string>
+#include <map>              
+#include <unordered_map>    
+#include <vector>          
+#include <mutex>
 #include "ConnectionHandler.h"
-#include "Frame.h"
+#include "event.h"
+
+
+class Frame;
 
 class StompProtocol {
 private:
     bool shouldTerminate;                // Indicates if the protocol should stop
     ConnectionHandler& connectionHandler; // Reference to the ConnectionHandler
-    Frame frameHandler;                  // Handles STOMP frame operations
 
     std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
     std::mutex reportsMutex; // locks reports map
@@ -51,10 +57,13 @@ public:
     void setReceiptUnsubscribe(int id);
     void setReceiptSubscribe(int id);
 };
+
+
 struct summaryReport { //structure ment to keep track of events reported by User X for channel Y
     int totalReports = 0;                      // Total number of events reported
     int activeCount = 0;                       // Count of active events
     int forcesArrivalCount = 0;                // Count of events with forces arrival
     std::vector<Event> events;                 // List of all events for the user
 };
+
 #endif // STOMPPROTOCOL_H

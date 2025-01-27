@@ -4,8 +4,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "event.h" 
-#include "StompProtocol.h"
+
+class StompProtocol;
 
 class Frame {
 private:
@@ -40,10 +40,10 @@ public:
     // Convert to string (for sending frames)
     std::string toString() const;
 };
-struct summaryReport { //structure ment to keep track of events reported by User X for channel Y
-    int totalReports = 0;                      // Total number of events reported
-    int activeCount = 0;                       // Count of active events
-    int forcesArrivalCount = 0;                // Count of events with forces arrival
-    std::vector<Event> events;                 // List of all events for the user
-};
+// struct summaryReport { //structure ment to keep track of events reported by User X for channel Y
+//     int totalReports = 0;                      // Total number of events reported
+//     int activeCount = 0;                       // Count of active events
+//     int forcesArrivalCount = 0;                // Count of events with forces arrival
+//     std::vector<Event> events;                 // List of all events for the user
+// };
 #endif // FRAME_H

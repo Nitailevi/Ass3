@@ -1,17 +1,20 @@
 #include "StompProtocol.h"
 #include <iostream>
 #include <sstream>
+#include "event.h"
 #include "Frame.h"
 
 StompProtocol::StompProtocol(ConnectionHandler& connectionHandler)
-    : shouldTerminate(false), connectionHandler(connectionHandler), frameHandler(frameHandler) {}
+    : shouldTerminate(false), connectionHandler(connectionHandler) {}
 
 void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& username, const std::string& password){ 
-    frameHandler.handleConnect(connectionHandler, hostPort, username, password, shouldTerminate);
+    Frame frame(*this);
+    frame.handleConnect(connectionHandler, hostPort, username, password, shouldTerminate);
 }
 
 void StompProtocol:: sendLogoutFrame(){
-    frameHandler.handleDisconnect(connectionHandler,shouldTerminate);
+    Frame frame(*this);
+    frame.handleDisconnect(connectionHandler,shouldTerminate);
 }
 
 void StompProtocol::processCommand(const std::string& command) {
@@ -20,22 +23,26 @@ void StompProtocol::processCommand(const std::string& command) {
     iss >> action; //first word
     
     if (action == "join") {
+        Frame frame(*this);
         std::string channelName;
         iss >> channelName;
-        frameHandler.handleSubscribe(connectionHandler, channelName);
+        frame.handleSubscribe(connectionHandler, channelName);
     } else if (action == "exit") {
+        Frame frame(*this);
         std::string channelName;
         iss >> channelName;
-        frameHandler.handleUnsubscribe(connectionHandler, channelName);
+        frame.handleUnsubscribe(connectionHandler, channelName);
     } else if (action == "report") {
+        Frame frame(*this);
         std::string filePath;
         iss >> filePath;
-        frameHandler.handleReport(connectionHandler, filePath);
+        frame.handleReport(connectionHandler, filePath);
     }
     else if (action == "summary") {
+    Frame frame(*this);
     std::string channelName, user, filePath;
     iss >> channelName >> user >> filePath;
-    frameHandler.handleSummary(channelName, user, filePath);
+    frame.handleSummary(channelName, user, filePath);
     }
     else {
         std::cout << "Illegal command, please try a different one" << "\n"; 
