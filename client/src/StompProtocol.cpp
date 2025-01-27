@@ -20,7 +20,8 @@ void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::stri
     Frame frame(*this);
     frame.handleConnect(connectionHandler, hostPort, login, passcode, shouldTerminate);
 }
-
+   
+   
 void StompProtocol:: sendLogoutFrame(){
     Frame frame(*this);
     frame.handleDisconnect(connectionHandler,shouldTerminate);
