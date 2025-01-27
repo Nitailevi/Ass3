@@ -14,7 +14,8 @@
 
 
 // Parse a raw frame = first line of frame
-Frame::Frame(const std::string& rawFrame, StompProtocol& protocol): protocol(protocol) {
+Frame::Frame(const std::string& rawFrame, StompProtocol& protocol)
+    :  command(""),headers(), body(""), protocol(protocol) {
     std::istringstream stream(rawFrame);
     std::getline(stream, command); // First line is the command
 

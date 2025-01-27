@@ -17,6 +17,11 @@ struct summaryReport { //structure ment to keep track of events reported by User
     int activeCount = 0;                       // Count of active events
     int forcesArrivalCount = 0;                // Count of events with forces arrival
     std::vector<Event> events;                 // List of all events for the user
+
+    // Constructor to initialize members
+    summaryReport()
+        : totalReports(0), activeCount(0), forcesArrivalCount(0), events() {}
+
 };
 
 class StompProtocol {
