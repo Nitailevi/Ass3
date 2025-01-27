@@ -7,8 +7,6 @@
 #include "../include/StompProtocol.h"
 
 
-
-
 // Default constructor
  Frame::Frame(StompProtocol& protocol) : command(""), headers(), body(""), protocol(protocol){}
 
@@ -138,7 +136,7 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     // Get the subscription ID
     int subscriptionId = mapChannelID[channelName];
 
-    int recieptUnsubscribe = protocol.getandIncrementtReceiptUnsubscribe();
+    int recieptUnsubscribe = protocol.getandIncrementReceiptUnsubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"id", std::to_string(subscriptionId)}, 
@@ -210,7 +208,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
 // Handle DISCONNECT frame
 void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldTerminate) {
 
-    int receiptId = protocol.getandIncrementtReceiptUnsubscribe();
+    int receiptId = protocol.getandIncrementReceiptUnsubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"receipt", std::to_string(receiptId)}

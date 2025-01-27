@@ -60,7 +60,7 @@ public:
     const std::unordered_map<std::string, int>& getMapChannelID() const;
     const std::unordered_map<int, std::string>& getMapRecieptID() const;
     int getandIncrementSubscriptionId();
-    int getandIncrementtReceiptUnsubscribe();
+    int getandIncrementReceiptUnsubscribe();
     int getandIncrementReceiptSubscribe();
     bool getShouldTerminate() const;
     std::mutex& getReportsMutex();

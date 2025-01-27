@@ -109,7 +109,6 @@ void StompProtocol::processServerResponse(const std::string& response) {
     }
 }
 
-
 // Getter functions implementation
  const std::map<std::string, std::map<std::string, summaryReport>>& StompProtocol::getReports() const {
     return reports;
@@ -127,7 +126,7 @@ int StompProtocol::getandIncrementSubscriptionId() {
     return subscriptionId;
 }
 
-int StompProtocol::getandIncrementtReceiptUnsubscribe(){
+int StompProtocol::getandIncrementReceiptUnsubscribe(){
     receiptUnsubscribe=receiptUnsubscribe+2;
     return receiptUnsubscribe;
 }
@@ -136,9 +135,11 @@ int StompProtocol::getandIncrementReceiptSubscribe(){
     receiptsubscribe=receiptsubscribe+2;
     return receiptsubscribe+2;
 }
+
 bool StompProtocol::getShouldTerminate() const {
     return shouldTerminate;
 }
+
 std::mutex& StompProtocol::getReportsMutex() {
     return reportsMutex;
 }
