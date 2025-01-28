@@ -64,25 +64,45 @@ void StompProtocol::processServerResponse(const std::string& response) {
     std::string command = frame.getCommand();
 
     if (command == "MESSAGE") {
-           // Update the summary reports- keep track of the events reported by each user for each channel
+        // Update the summary reports- keep track of the events reported by each user for each channel
+
+        std::cout << "recived MESSAGE frame1 " << std::endl;
     
         Event event(response); // Parse the event from the frame body
+
+        std::cout << "recived MESSAGE frame2 " << std::endl;
+
         std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
+
+        std::cout << "recived MESSAGE frame3 " << std::endl;
        
         std::string channelName = event.get_channel_name();
         std::string eventOwnerUser = event.getEventOwnerUser();
+
+        std::cout << "recived MESSAGE frame4 " << std::endl;
         
         summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
 
+        std::cout << "recived MESSAGE frame5 " << std::endl;
+
         // Update statistics- based on gneeral info map
         report.totalReports++; // update count
-        if (event.get_general_information().at("active") == "true") {
-            report.activeCount++; // update count
-        }
-        if (event.get_general_information().at("forces_arrival_at_scene") == "true") {
-            report.forcesArrivalCount++; // update count
-        }
 
+    std::cout << "received MESSAGE frame6 " << std::endl;
+    auto generalInfo1 = event.get_general_information();
+    auto it1 = generalInfo1.find("active");
+    if (it1 != generalInfo1.end() && it1->second == "true") {
+        report.activeCount++; // Update count
+    }
+
+    std::cout << "received MESSAGE frame7 " << std::endl;
+    auto generalInfo2 = event.get_general_information();
+    auto it2 = generalInfo2.find("forces_arrival_at_scene");
+    if (it2 != generalInfo2.end() && it2->second == "true") {
+        report.forcesArrivalCount++; // Update count
+    }  
+
+          std::cout << "recived MESSAGE frame8 " << std::endl;
         // Add the curr event  to the vector of events
         report.events.push_back(event);
 
@@ -93,7 +113,7 @@ void StompProtocol::processServerResponse(const std::string& response) {
         if (std::stoi(recieptId) % 2 == 0 && channelName != "Unknown channel") {
             std::cout << "Joined channel "+channelName << "\n";
         } else if (std::stoi(recieptId) % 2 == 1 && channelName != "Unknown channel") {
-             std::cout << "Joined channel "+channelName << "\n";
+            std::cout << "Exited channel " << channelName << std::endl;
         } else {
             std::cerr << "Unknown receipt ID: " +channelName << "\n";
         }

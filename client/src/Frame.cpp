@@ -141,7 +141,7 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
 
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
-        std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\".\n";
+        std::cerr << "Error: Not subscribed to the channel " << channelName << "\n";
         return;
     }
 
@@ -169,7 +169,6 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     if (!connectionHandler.sendLine(frameString)) {
         std::cerr << "Failed to send UNSUBSCRIBE frame.\n";
     }
-    std::cout << "Exited channel " << channelName << std::endl;
 }
     
     
@@ -220,7 +219,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
             std::cerr << "Failed to send SEND frame for event: " << event.get_name() << "\n";
         }
     }
-    std::cout << "Reported" << channelName << std::endl;
+    std::cout << "Reported " << channelName << std::endl;
 }
 
 // Handle DISCONNECT frame
@@ -241,7 +240,7 @@ void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldT
      // Close the socket
     connectionHandler.close(); // might not be necessery- maybe better in main
     shouldTerminate = true; // Signal protocol termination
-     std::cout << " Logged out" << std::endl;
+     std::cout << "Logged out" << std::endl;
 }   
 
 
