@@ -32,7 +32,7 @@ private:
     std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
     std::mutex reportsMutex; // locks reports map
     std::unordered_map<std::string, int> mapChannelID; // Map channel names to IDs
-    std::unordered_map<std::string, int> mapRecieptID; // Map   
+    std::unordered_map<int, std::string> mapRecieptID; // Map   
 
     int subscriptionId; // Keep track of subscription IDs
     int receiptUnsubscribe; // odd
@@ -56,23 +56,17 @@ public:
     // bool shouldTerminateProtocol() const;
 
     //getters
-    std::map<std::string, std::map<std::string, summaryReport>>& getReports() ; ;
-    std::unordered_map<std::string, int>& getMapChannelID() ;
-    std::unordered_map<std::string, int>& getMapRecieptID() ;
-    int getSubscriptionId() const;
-    int getReceiptUnsubscribe() const;
-    int getReceiptSubscribe() const;
+    const std::map<std::string, std::map<std::string, summaryReport>>& getReports() const; ;
+    const std::unordered_map<std::string, int>& getMapChannelID() const;
+    const std::unordered_map<int, std::string>& getMapRecieptID() const;
+    int getandIncrementSubscriptionId();
+    int getandIncrementReceiptUnsubscribe();
+    int getandIncrementReceiptSubscribe();
     bool getShouldTerminate() const;
     std::mutex& getReportsMutex();
 
     //setters
     void setShouldTerminate(bool terminate);
-    void setSubscriptionId(int id);
-    void setReceiptUnsubscribe(int id);
-    void setReceiptSubscribe(int id);
 };
-
-
-
 
 #endif // STOMPPROTOCOL_H

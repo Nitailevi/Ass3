@@ -7,30 +7,29 @@
 #include "../include/StompProtocol.h"
 
 
-
-
 // Default constructor
  Frame::Frame(StompProtocol& protocol) : command(""), headers(), body(""), protocol(protocol){}
 
 
 // Parse a raw frame = first line of frame
 Frame::Frame(const std::string& rawFrame, StompProtocol& protocol)
-    :  command(""),headers(), body(""), protocol(protocol) {
+    : command(), headers(), body(),protocol(protocol) { 
     std::istringstream stream(rawFrame);
+
+    // Parse command
     std::getline(stream, command); // First line is the command
 
     // Parse headers
     std::string line;
-    while (std::getline(stream, line) && !line.empty()) { //while theres a message
+    while (std::getline(stream, line) && !line.empty()) {
         size_t delimiter = line.find(':');
-        if (delimiter != std::string::npos) { //delimiter is found (npos is the end of the string)
-            std::string key = line.substr(0, delimiter);    //key is the first part of the line
-            std::string value = line.substr(delimiter + 1); //value is the second part of the line
-            headers[key] = value;                        //add the key and value to the headers
+        if (delimiter != std::string::npos) {
+            std::string key = line.substr(0, delimiter);
+            std::string value = line.substr(delimiter + 1);
+            headers[key] = value;
         }
     }
 
-    // Read the body
     std::getline(stream, body, '\0'); // Read until the null character
 }
 
@@ -95,8 +94,9 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
    
     // make sure no double-subs
      std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
+      std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapRecieptID();
       if (mapChannelID.find(channelName) != mapChannelID.end()) {
-             std::cerr << "Channel \"" << channelName << "\" is already subscribed with ID: " << mapChannelID[channelName] << "\n";  //check what to print
+             std::cerr << "Channel " << channelName << " is already subscribed with ID: " << mapChannelID[channelName] << "\n";  //check what to print
              return;
         }
 
@@ -104,36 +104,25 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
    std::cerr << "mapChannelID size before: " << mapChannelID.size() << std::endl;
 
     // Add the channel and ID to the map
-   mapChannelID[channelName] = protocol.getSubscriptionId();
     
-  //check 
-   std::cerr << "mapChannelID size after (bismilah): " << mapChannelID.size() << std::endl;
-
-    protocol.setSubscriptionId(protocol.getSubscriptionId() + 1); // Increment the subscription ID  // can do a method of get and increament
-   
-
-    int subscriptionId = protocol.getSubscriptionId(); // Increment the subscription ID
-
-       std::cerr << "sub id: " << std::to_string(subscriptionId) << std::endl; 
-
-    protocol.setReceiptSubscribe(protocol.getReceiptSubscribe() + 2); // can do a method of get and increament
-     int recieptsubscribe = protocol.getReceiptSubscribe();
-
-    std::cerr << "reciept id: " << std::to_string(recieptsubscribe) << std::endl;   
+    int subscriptionId = protocol.getandIncrementSubscriptionId(); // Increment the subscription ID
     
+    int recieptsubscribe = protocol.getandIncrementReceiptSubscribe();
+
     std::unordered_map<std::string, std::string> headers = {
-        {"destination", "/" + channelName},
+        {"destination", channelName},
         {"id", std::to_string(subscriptionId)}, // maybe need to wait for ticket?
         {"receipt", std::to_string(recieptsubscribe)}
     };
-    std::unordered_map<std::string, int>& mapRecieptID = protocol.getMapRecieptID();
-    mapRecieptID[channelName] = recieptsubscribe;
+
+    mapChannelID[channelName]=subscriptionId;
+    mapRecieptID[recieptsubscribe] = channelName;
     Frame subscribeFrame("SUBSCRIBE", headers, "", protocol);
 
     // Send frame
     std::string frameString = subscribeFrame.toString();
     if (!connectionHandler.sendLine(frameString)) {
-        std::cerr << "Failed to send SUBSCRIBE frame.\n";
+        std::cerr << "Failed to send SUBSCRIBE frame"<< "\n";
     }
 }
 
@@ -154,16 +143,14 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     // Get the subscription ID
     int subscriptionId = mapChannelID.at(channelName);
 
-    protocol.setReceiptUnsubscribe(protocol.getReceiptUnsubscribe() + 2);
-    int recieptUnsubscribe = protocol.getReceiptUnsubscribe();
+    int recieptUnsubscribe = protocol.getandIncrementReceiptUnsubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"id", std::to_string(subscriptionId)}, 
         {"receipt", std::to_string(recieptUnsubscribe)}
     };
-    
-     std::unordered_map<std::string, int> mapRecieptID = protocol.getMapRecieptID();
-    mapRecieptID[channelName] = recieptUnsubscribe;
+     std::unordered_map<int, std::string> mapRecieptID = protocol.getMapRecieptID();
+    mapRecieptID[recieptUnsubscribe] = channelName;
     Frame unsubscribeFrame("UNSUBSCRIBE", headers, "", protocol) ;
 
     // Send frame
@@ -228,9 +215,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
 // Handle DISCONNECT frame
 void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldTerminate) {
 
-    protocol.setReceiptUnsubscribe(protocol.getReceiptUnsubscribe() + 2);
-
-    int receiptId = protocol.getReceiptUnsubscribe();
+    int receiptId = protocol.getandIncrementReceiptUnsubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"receipt", std::to_string(receiptId)}

@@ -87,15 +87,15 @@ void StompProtocol::processServerResponse(const std::string& response) {
         report.events.push_back(event);
 
     } else if (command == "RECEIPT") { // after join channel i sent recieptId. the server sends back a recieptId- need to check in map which channel - by odd and even
-
-        if (std::stoi(frame.getHeader("receipt-id")) % 2 == 0) {
-            std::cout << "Joined channel : " << frame.getHeader("receipt-id") << "\n";
-            mapChannelID[frame.getHeader("receipt-id")] = subscriptionId;
-            subscriptionId++;
-        } else if (std::stoi(frame.getHeader("receipt-id")) % 2 == 1) {
-            std::cout << "Exited channel : " << frame.getHeader("receipt-id") << "\n";
+        std::string recieptId = frame.getHeader("receipt-id");
+        auto it = mapRecieptID.find(std::stoi(recieptId));
+        std::string channelName = (it != mapRecieptID.end()) ? it->second : "Unknown channel";
+        if (std::stoi(recieptId) % 2 == 0 && channelName != "Unknown channel") {
+            std::cout << "Joined channel "+channelName << "\n";
+        } else if (std::stoi(recieptId) % 2 == 1 && channelName != "Unknown channel") {
+             std::cout << "Joined channel "+channelName << "\n";
         } else {
-            std::cerr << "Unknown receipt ID: " << frame.getHeader("receipt-id") << "\n";
+            std::cerr << "Unknown receipt ID: " +channelName << "\n";
         }
 
 
@@ -109,7 +109,6 @@ void StompProtocol::processServerResponse(const std::string& response) {
     }
 }
 
-
 // Getter functions implementation
   std::map<std::string, std::map<std::string, summaryReport>>& StompProtocol::getReports()  {
     return reports;
@@ -122,20 +121,25 @@ void StompProtocol::processServerResponse(const std::string& response) {
  std::unordered_map<std::string, int>& StompProtocol::getMapRecieptID()  {
     return mapRecieptID;
 }
-int StompProtocol::getSubscriptionId() const {
+int StompProtocol::getandIncrementSubscriptionId() {
+    subscriptionId++;
     return subscriptionId;
 }
 
-int StompProtocol::getReceiptUnsubscribe() const {
+int StompProtocol::getandIncrementReceiptUnsubscribe(){
+    receiptUnsubscribe=receiptUnsubscribe+2;
     return receiptUnsubscribe;
 }
 
-int StompProtocol::getReceiptSubscribe() const {
-    return receiptsubscribe;
+int StompProtocol::getandIncrementReceiptSubscribe(){
+    receiptsubscribe=receiptsubscribe+2;
+    return receiptsubscribe+2;
 }
+
 bool StompProtocol::getShouldTerminate() const {
     return shouldTerminate;
 }
+
 std::mutex& StompProtocol::getReportsMutex() {
     return reportsMutex;
 }
@@ -144,14 +148,6 @@ std::mutex& StompProtocol::getReportsMutex() {
 void StompProtocol::setShouldTerminate(bool terminate) {
     shouldTerminate = terminate;
 }
-void StompProtocol::setSubscriptionId(int id) {
-    subscriptionId = id;
-}
-void StompProtocol::setReceiptUnsubscribe(int id) {
-    receiptUnsubscribe = id;
-}
-void StompProtocol::setReceiptSubscribe(int id) {
-    receiptsubscribe = id;
-}
+
 
 
