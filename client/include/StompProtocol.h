@@ -31,12 +31,15 @@ private:
 
     std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
     std::mutex reportsMutex; // locks reports map
+    std::mutex receiptMutex;
     std::unordered_map<std::string, int> mapChannelID; // Map channel names to IDs
-    std::unordered_map<int, std::string> mapRecieptID; // Map   
+    std::unordered_map<int, std::string> mapReceiptID; // Map   
 
     int subscriptionId; // Keep track of subscription IDs
     int receiptUnsubscribe; // odd
     int receiptsubscribe; //even
+
+    std::string login; //user name
 
 
 public:
@@ -58,12 +61,15 @@ public:
     //getters
      std::map<std::string, std::map<std::string, summaryReport>>& getReports() ; ;
      std::unordered_map<std::string, int>& getMapChannelID() ;
-     std::unordered_map<int, std::string>& getMapRecieptID() ;
+     std::unordered_map<int, std::string>& getMapReceiptID() ;
     int getandIncrementSubscriptionId();
     int getandIncrementReceiptUnsubscribe();
     int getandIncrementReceiptSubscribe();
     bool getShouldTerminate() const;
     std::mutex& getReportsMutex();
+    std::mutex& getReceiptMutex();
+
+    const std::string getLogin() const;
 
     //setters
     void setShouldTerminate(bool terminate);

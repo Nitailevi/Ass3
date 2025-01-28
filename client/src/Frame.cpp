@@ -91,9 +91,10 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
 
 // Handle SUBSCRIBE frame
 void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
-   
+    
+    std::unique_lock<std::mutex> lock(protocol.getReceiptMutex());
     // make sure no double-subs
-    std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapRecieptID();
+    std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapReceiptID();
     std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
 
       if (mapChannelID.find(channelName) != mapChannelID.end()) {
@@ -124,6 +125,8 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
     std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
     std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
 
+    lock.unlock();
+
     Frame subscribeFrame("SUBSCRIBE", headers, "", protocol);
 
     // Send frame
@@ -136,8 +139,11 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
 
 // Handle UNSUBSCRIBE frame
 void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
+
+    std::unique_lock<std::mutex> lock(protocol.getReceiptMutex());
+
     std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
-    std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapRecieptID();
+    std::unordered_map<int, std::string>& mapReceiptID = protocol.getMapReceiptID();
 
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
@@ -155,15 +161,16 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     };
 // check 
     std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
-    std:: cerr << "reciept id map size before insert: " << mapRecieptID.size() << "\n";
+    std:: cerr << "reciept id map size before insert: " << mapReceiptID.size() << "\n";
     
-    mapRecieptID[recieptUnsubscribe] = channelName;
+    mapReceiptID[recieptUnsubscribe] = channelName;
     Frame unsubscribeFrame("UNSUBSCRIBE", headers, "", protocol) ;
 
 // check 
     std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
-    std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
+    std:: cerr << "reciept id map size after insert: " << mapReceiptID.size() << "\n";
 
+    lock.unlock();
     // Send frame
     std::string frameString = unsubscribeFrame.toString();
     if (!connectionHandler.sendLine(frameString)) {
@@ -185,7 +192,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
 
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
-        std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\". Cannot send messages.\n";
+        std::cerr << "Error: Not subscribed to the channel " << channelName << " Cannot send messages.\n";
         return;
     }
 
@@ -198,15 +205,15 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
         };
 
         // Format the event body according to the specified report format
-        std::string body = "user: " + event.getEventOwnerUser() + "\n" +
-                           "city: " + event.get_city() + "\n" +
-                           "event name: " + event.get_name() + "\n" +
-                           "date time: " + std::to_string(event.get_date_time()) + "\n" +
+        std::string body = "user:" + protocol.getLogin() + "\n" +
+                           "city:" + event.get_city() + "\n" +
+                           "event name:" + event.get_name() + "\n" +
+                           "date time:" + std::to_string(event.get_date_time()) + "\n" +
                            "general information:\n";
 
         // Add general information to the body
         for (const auto& pair : event.get_general_information()) {
-            body += pair.first + ": " + pair.second + "\n";
+            body += pair.first + ":" + pair.second + "\n";
         }
 
         // Add the description to the body
@@ -254,8 +261,8 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
     }
     std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
 
-     if (mapChannelID.find(channelName) != mapChannelID.end()) {
-             std::cerr <<  "you are not subscribed to channel" + channelName << "\n";
+     if (mapChannelID.find(channelName) == mapChannelID.end()) {
+             std::cerr <<  "you are not subscribed to channel " + channelName << "\n";
              return;
      }
     // Lock the reports map while accessing it- thread safe
@@ -263,10 +270,19 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
 
  std::map<std::string, std::map<std::string, summaryReport>>& reports = protocol.getReports(); // Get the reports map
     // Check if the user and channel exist in the map
+    if (reports.find(channelName) == reports.end()){
+        std::cerr << "No found the channel: " << channelName  << "\n";
+    }
+    if (reports[channelName].find(user) == reports[channelName].end()){
+        std::cerr << "No found user: " << user << "\n";
+    }
+
+
     if (reports.find(channelName) == reports.end() || reports[channelName].find(user) == reports[channelName].end()) { //end means non existant
         std::cerr << "No reports found for channel: " << channelName << " and user: " << user << "\n";
         return;
     }
+
 
     summaryReport& report = reports[channelName][user]; // Get the report for the user + channel
 
