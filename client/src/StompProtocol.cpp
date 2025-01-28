@@ -111,15 +111,15 @@ void StompProtocol::processServerResponse(const std::string& response) {
 
 
 // Getter functions implementation
- const std::map<std::string, std::map<std::string, summaryReport>>& StompProtocol::getReports() const {
+  std::map<std::string, std::map<std::string, summaryReport>>& StompProtocol::getReports()  {
     return reports;
 }
 
-const std::unordered_map<std::string, int>& StompProtocol::getMapChannelID() const {
+ std::unordered_map<std::string, int>& StompProtocol::getMapChannelID()  {
     return mapChannelID;
 }
 
-const std::unordered_map<std::string, int>& StompProtocol::getMapRecieptID() const {
+ std::unordered_map<std::string, int>& StompProtocol::getMapRecieptID()  {
     return mapRecieptID;
 }
 int StompProtocol::getSubscriptionId() const {
