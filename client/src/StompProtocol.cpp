@@ -118,7 +118,7 @@ void StompProtocol::processServerResponse(const std::string& response) {
     return mapChannelID;
 }
 
- std::unordered_map<std::string, int>& StompProtocol::getMapRecieptID()  {
+std::unordered_map<int, std::string>& StompProtocol::getMapRecieptID() {
     return mapRecieptID;
 }
 int StompProtocol::getandIncrementSubscriptionId() {

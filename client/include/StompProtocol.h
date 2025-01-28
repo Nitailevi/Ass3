@@ -56,9 +56,9 @@ public:
     // bool shouldTerminateProtocol() const;
 
     //getters
-    const std::map<std::string, std::map<std::string, summaryReport>>& getReports() const; ;
-    const std::unordered_map<std::string, int>& getMapChannelID() const;
-    const std::unordered_map<int, std::string>& getMapRecieptID() const;
+     std::map<std::string, std::map<std::string, summaryReport>>& getReports() ; ;
+     std::unordered_map<std::string, int>& getMapChannelID() ;
+     std::unordered_map<int, std::string>& getMapRecieptID() ;
     int getandIncrementSubscriptionId();
     int getandIncrementReceiptUnsubscribe();
     int getandIncrementReceiptSubscribe();

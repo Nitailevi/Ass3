@@ -93,15 +93,13 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
 void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
    
     // make sure no double-subs
-     std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
-      std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapRecieptID();
+    std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapRecieptID();
+    std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
+
       if (mapChannelID.find(channelName) != mapChannelID.end()) {
              std::cerr << "Channel " << channelName << " is already subscribed with ID: " << mapChannelID[channelName] << "\n";  //check what to print
              return;
         }
-
-//check 
-   std::cerr << "mapChannelID size before: " << mapChannelID.size() << std::endl;
 
     // Add the channel and ID to the map
     
@@ -115,8 +113,17 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
         {"receipt", std::to_string(recieptsubscribe)}
     };
 
+// check 
+     std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
+    std:: cerr << "reciept id map size before insert: " << mapRecieptID.size() << "\n";
+
     mapChannelID[channelName]=subscriptionId;
     mapRecieptID[recieptsubscribe] = channelName;
+    
+    // check 
+    std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
+    std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
+
     Frame subscribeFrame("SUBSCRIBE", headers, "", protocol);
 
     // Send frame
@@ -124,34 +131,38 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
     if (!connectionHandler.sendLine(frameString)) {
         std::cerr << "Failed to send SUBSCRIBE frame"<< "\n";
     }
+
 }
 
 // Handle UNSUBSCRIBE frame
 void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::string& channelName) {
-    const std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
-  
-  // check
-  std::cerr << "mapChannelID size before: " << mapChannelID.size() << std::endl;
-
+    std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
+    std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapRecieptID();
 
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
-       std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\".\n";
-         return;
+        std::cerr << "Error: Not subscribed to the channel \"" << channelName << "\".\n";
+        return;
     }
 
     // Get the subscription ID
     int subscriptionId = mapChannelID.at(channelName);
-
     int recieptUnsubscribe = protocol.getandIncrementReceiptUnsubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"id", std::to_string(subscriptionId)}, 
         {"receipt", std::to_string(recieptUnsubscribe)}
     };
-     std::unordered_map<int, std::string> mapRecieptID = protocol.getMapRecieptID();
+// check 
+    std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
+    std:: cerr << "reciept id map size before insert: " << mapRecieptID.size() << "\n";
+    
     mapRecieptID[recieptUnsubscribe] = channelName;
     Frame unsubscribeFrame("UNSUBSCRIBE", headers, "", protocol) ;
+
+// check 
+    std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
+    std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
 
     // Send frame
     std::string frameString = unsubscribeFrame.toString();
@@ -171,7 +182,7 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
     // Extract the channel name
     std::string channelName = parsedData.channel_name;
 
-    std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
+    std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
 
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
@@ -242,7 +253,7 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
         std::cerr << "Failed to open file: " << filePath << " for writing.\n";
         return;
     }
-        std::unordered_map<std::string, int> mapChannelID = protocol.getMapChannelID();
+    std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
 
      if (mapChannelID.find(channelName) != mapChannelID.end()) {
              std::cerr <<  "you are not subscribed to channel" + channelName << "\n";
@@ -251,7 +262,7 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
     // Lock the reports map while accessing it- thread safe
     std::lock_guard<std::mutex> lock(protocol.getReportsMutex() );
 
- std::map<std::string, std::map<std::string, summaryReport>> reports = protocol.getReports(); // Get the reports map
+ std::map<std::string, std::map<std::string, summaryReport>>& reports = protocol.getReports(); // Get the reports map
     // Check if the user and channel exist in the map
     if (reports.find(channelName) == reports.end() || reports[channelName].find(user) == reports[channelName].end()) { //end means non existant
         std::cerr << "No reports found for channel: " << channelName << " and user: " << user << "\n";
