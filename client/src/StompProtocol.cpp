@@ -39,12 +39,18 @@ void StompProtocol::processCommand(const std::string& command) {
     if (action == "join") {
         Frame frame(*this);
         std::string channelName;
-        iss >> channelName;
+        if (!(iss >> channelName) || channelName.empty()) {
+            std::cout << "join command needs 1 args:{channel_name}" << std::endl;
+            return;
+        }
         frame.handleSubscribe(connectionHandler, channelName);
     } else if (action == "exit") {
         Frame frame(*this);
         std::string channelName;
-        iss >> channelName;
+        if (!(iss >> channelName) || channelName.empty()) {
+            std::cout << "exit command needs 1 args:{channel_name}" << std::endl;
+            return;
+        }
         frame.handleUnsubscribe(connectionHandler, channelName);
     } else if (action == "report") {
         Frame frame(*this);
@@ -69,64 +75,30 @@ void StompProtocol::processServerResponse(const std::string& response) {
 
     if (command == "MESSAGE") {
         // Update the summary reports- keep track of the events reported by each user for each channel
-
-        std::cout << "recived MESSAGE frame1 " << std::endl;
-        std::cout << response << std::endl;
-
-    
         Event event(response); // Parse the event from the frame body
 
-        std::cout << "recived MESSAGE frame2 " << std::endl;
-
         std::lock_guard<std::mutex> lock(reportsMutex); // Ensure thread-safe access
-
-        std::cout << "recived MESSAGE frame3 " << std::endl;
        
         std::string channelName = event.get_channel_name();
         std::string eventOwnerUser = event.getEventOwnerUser();
-
-        std::cout << "recived MESSAGE frame4 " << std::endl;
-        std::cout <<"channelName "+ channelName << std::endl;
-        std::cout <<"eventOwnerUser "+ eventOwnerUser << std::endl;
         
         reports[channelName];
         summaryReport& report = reports[channelName][eventOwnerUser]; // Get the report for the user
 
-        std::cout << "recived MESSAGE frame5 " << std::endl;
-
         // Update statistics- based on gneeral info map
         report.totalReports++; // update count
 
-        std::cout << "received MESSAGE frame6 " << std::endl;
         auto generalInfo1 = event.get_general_information();
         auto it1 = generalInfo1.find("active");
         if (it1 != generalInfo1.end() && it1->second == "true") {
-            std::cout<<"active count "+report.activeCount<<std::endl;
             report.activeCount++; // Update count
         }
 
-        std::cout << "received MESSAGE frame7 " << std::endl;
         auto generalInfo2 = event.get_general_information();
         auto it2 = generalInfo2.find("forces_arrival_at_scene");
-        if (it2 != generalInfo2.end()) {
-            std::cout << "no issue on general info " << std::endl;
-        }
-        if( it2->second == "true"){
-            std::cout << "no issue on value " << std::endl;
-        }
-        std::cout << "generalInfo2 contents:" << std::endl;
-
-        //check map need to delete
-         for (const auto& pair : generalInfo2) {
-            std::cout << "iterate on map" << pair.first << ": " << pair.second << std::endl;
-        }
-
         if (it2 != generalInfo2.end() && it2->second == "true") {
-            std::cout<<"forcesArrivalCount "+report.forcesArrivalCount<<std::endl;
             report.forcesArrivalCount++; // Update count
         }  
-
-        std::cout << "recived MESSAGE frame8 " << std::endl;
         // Add the curr event  to the vector of events
         report.events.push_back(event);
 

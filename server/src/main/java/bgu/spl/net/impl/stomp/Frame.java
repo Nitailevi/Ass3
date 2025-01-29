@@ -40,7 +40,6 @@ public class Frame {
         switch (command) {
             case "CONNECT":
                 handleConnect();
-                System.out.println("handleFrame "+command);
                 break;
             case "SEND":
                 handleSend();
@@ -61,8 +60,6 @@ public class Frame {
     public void handleConnect() {
         String login = headers.get("login");
         String passcode = headers.get("passcode");
-        
-        System.out.println("handleConnect "+login+" "+passcode+" "+connectionId);
         
         if(login !=null && passcode !=null){
             String message= connections.authenticate(login ,passcode, connectionId);

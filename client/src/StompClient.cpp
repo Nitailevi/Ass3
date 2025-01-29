@@ -56,11 +56,17 @@ int main() {
                 continue;
             }
             std::string host = hostPort.substr(0, colonPos);
-            int port = std::stoi(hostPort.substr(colonPos + 1));
+            int port;
+            try{
+            port=std::stoi(hostPort.substr(colonPos + 1));
+            }catch (const std::exception&){
+                std::cout << "host:port are illegal"<< std::endl;
+                continue;
+            }
             ConnectionHandler connectionHandler(host, port);
 
             if (!connectionHandler.connect()) { //connect to the server
-                std::cout <<"Connection failed (Error: Invalid argument)\n" "Cannot connect to " << host << ":" << port << "please try to login again"<< std::endl;
+                std::cout <<"Cannot connect to " << host << ":" << port << " please try to login again"<< std::endl;
                 continue;
             }
             connectionActive=true;
@@ -69,26 +75,27 @@ int main() {
             std::thread serverThread (serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(connectionActive));
 
             protocol.sendLoginFrame(hostPort, login, passcode);
-            // if (serverThread.joinable()){
-            //     serverThread.join();
-            // }
 
             while (connectionActive) { 
                 std::string subCommand;
-                std::cout << "sub level" << std::endl;
-                    std::getline(std::cin, subCommand);
-                    if (subCommand == "logout") {
-                        protocol.sendLogoutFrame(); 
-                    } else if(action != "login") {
-                        std::cout << "not login level" << std::endl;
-                        protocol.processCommand(subCommand);
-                        } else{
-                            pendingCommand=subCommand;
+                std::getline(std::cin, subCommand);
+                std::istringstream iss(subCommand); // allows going word by word
+                std::string action;
+                iss >> action; //first word
+                if (action == "logout") {
+                    protocol.sendLogoutFrame(); 
+                } else if(action != "login") {
+                    protocol.processCommand(subCommand);
+                    } else if(!connectionActive){
+                        pendingCommand=subCommand;
+                        }else{
+                           std::cout << "user already logedin" << std::endl;
+                           continue; 
                         }
-            
-                    if (serverThread.joinable()){
-                        serverThread.join();
-                    }
+
+            }
+            if (serverThread.joinable()){
+                serverThread.join();
             }
 
         } else {

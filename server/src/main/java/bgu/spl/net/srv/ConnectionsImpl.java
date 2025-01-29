@@ -74,21 +74,16 @@ public class ConnectionsImpl<T> implements Connections<T> {
     }
 
     public String authenticate(String login, String passcode, int connectionId){
-        System.out.println("authentication request for login: " + login);
 
         if(loggedInUsers.containsKey(login)){
-            System.out.println("User already logged in: " + login);
             return "User already logged in";
-
         } else {
             users.putIfAbsent(login, passcode);
             if (!users.get(login).equals(passcode)) {
-                System.out.println("Wrong password for login: " + login);
                 return "Wrong Password";
             }
             
             loggedInUsers.put(login, connectionId);
-            System.out.println("Client authenticated and registered with connectionId: " + connectionId);
             return "no error";  
         }
     }

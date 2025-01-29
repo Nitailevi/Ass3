@@ -86,7 +86,6 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
     }
     else {
         std::cout << "Connected to " << hostPort << std::endl;
-        std::cout <<frameString<< std::endl;
     }
 }
 
@@ -99,7 +98,7 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
     std::unordered_map<std::string, int>& mapChannelID = protocol.getMapChannelID();
 
       if (mapChannelID.find(channelName) != mapChannelID.end()) {
-             std::cerr << "Channel " << channelName << " is already subscribed with ID: " << mapChannelID[channelName] << "\n";  //check what to print
+             std::cerr << "Channel " << channelName << " is already subscribed" << "\n";  //check what to print
              return;
         }
 
@@ -115,17 +114,10 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
         {"receipt", std::to_string(recieptsubscribe)}
     };
 
-// check 
-    //  std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
-    // std:: cerr << "reciept id map size before insert: " << mapRecieptID.size() << "\n";
 
     mapChannelID[channelName]=subscriptionId;
     mapRecieptID[recieptsubscribe] = channelName;
     
-    // check 
-    // std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
-    // std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
-
     lock.unlock();
 
     Frame subscribeFrame("SUBSCRIBE", headers, "", protocol);
@@ -148,28 +140,23 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
 
     // **VALIDATION: Check if the client is subscribed to the channel**
     if (mapChannelID.find(channelName) == mapChannelID.end()) {
-        std::cerr << "Error: Not subscribed to the channel " << channelName << "\n";
+        std::cerr << "you are not subscribed to channel " << channelName << "\n";
         return;
     }
 
     // Get the subscription ID
     int subscriptionId = mapChannelID.at(channelName);
+    mapChannelID.erase(channelName);
     int recieptUnsubscribe = protocol.getandIncrementReceiptUnsubscribe();
 
     std::unordered_map<std::string, std::string> headers = {
         {"id", std::to_string(subscriptionId)}, 
         {"receipt", std::to_string(recieptUnsubscribe)}
     };
-// // check 
-//     std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
-//     std:: cerr << "reciept id map size before insert: " << mapReceiptID.size() << "\n";
+
     
     mapReceiptID[recieptUnsubscribe] = channelName;
     Frame unsubscribeFrame("UNSUBSCRIBE", headers, "", protocol) ;
-
-// // check 
-//     std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
-//     std:: cerr << "reciept id map size after insert: " << mapReceiptID.size() << "\n";
 
     lock.unlock();
     // Send frame
@@ -179,8 +166,6 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
     }
 }
     
-    
-    //names_and_events parseEventsFile(std::string json_path); //used in report
 
     // Handle REPORT (SEND frames for multiple events)
 void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_path) {
@@ -251,10 +236,6 @@ void Frame::handleDisconnect(ConnectionHandler& connectionHandler) {
     if (!connectionHandler.sendLine(frameString)) {
         std::cerr << "Failed to send DISCONNECT frame.\n";
     }
-     // Close the socket
-    // connectionHandler.close(); // might not be necessery- maybe better in main
-    // shouldTerminate = true; // Signal protocol termination
-    //  std::cout << "Logged out" << std::endl;
 }   
 
 
@@ -276,13 +257,6 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
     std::lock_guard<std::mutex> lock(protocol.getReportsMutex() );
 
  std::map<std::string, std::map<std::string, summaryReport>>& reports = protocol.getReports(); // Get the reports map
-    // Check if the user and channel exist in the map
-    if (reports.find(channelName) == reports.end()){
-        std::cerr << "No found the channel: " << channelName  << "\n";
-    }
-    if (reports[channelName].find(user) == reports[channelName].end()){
-        std::cerr << "No found user: " << user << "\n";
-    }
 
 
     if (reports.find(channelName) == reports.end() || reports[channelName].find(user) == reports[channelName].end()) { //end means non existant
@@ -302,12 +276,6 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
             return a.get_date_time() < b.get_date_time();
         });
     //at this point- the events are sorted
-
-    // Print the sorted events for verification - toDELETE
-    std::cout << "Sorted events for channel: " << channelName << " and user: " << user << "\n";
-    for (const Event& event : report.events) {
-        std::cout << "Event name: " << event.get_name() << ", Date time: " << event.get_date_time() << "\n";
-    }   
 
     // Write the header
     outputFile << "Channel: " << channelName << "\n";

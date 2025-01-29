@@ -20,7 +20,6 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     
     @Override
     public void process(String message){
-        System.out.println("Processing message: "+message);
        Frame frame= new Frame(message, connections, connectionId, terminate);
        frame.handleFrame();
        if (terminate.get())
