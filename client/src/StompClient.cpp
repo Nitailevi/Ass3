@@ -51,8 +51,6 @@ int main() {
             }
             std::string host = hostPort.substr(0, colonPos);
             int port = std::stoi(hostPort.substr(colonPos + 1));
-
-             std::cout << "Starting to connect to " << hostPort << std::endl;
             ConnectionHandler connectionHandler(host, port);
             if (!connectionHandler.connect()) { //connect to the server
                 std::cout <<"Connection failed (Error: Invalid argument)\n" "Cannot connect to " << host << ":" << port << "please try to login again"<< std::endl;
@@ -69,15 +67,13 @@ int main() {
                 std::getline(std::cin, command);
                 if (command == "logout") {
                     protocol.sendLogoutFrame(); 
-                    shouldTerminate = true; 
-                    loggedIn = false;
                 } else {
                     protocol.processCommand(command);
                 }
             }
-
-            if (serverThread.joinable())
+            if (serverThread.joinable()){
                 serverThread.join();
+            }
 
         } else if (!loggedIn) {
             std::cout << "please login first" << std::endl;

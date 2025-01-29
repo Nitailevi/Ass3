@@ -136,17 +136,23 @@ void StompProtocol::processServerResponse(const std::string& response) {
 
         auto it = mapReceiptID.find(std::stoi(recieptId));
         std::string channelName = (it != mapReceiptID.end()) ? it->second : "Unknown channel";
-        if (std::stoi(recieptId) % 2 == 0 && channelName != "Unknown channel") {
+        lock.unlock();
+        if(channelName == "logout"){
+            //connectionHandler.close(); // might not be necessery- maybe better in main
+            shouldTerminate = true; // Signal protocol termination
+            std::cout << "Logged out" << std::endl;
+        
+        }else if (std::stoi(recieptId) % 2 == 0 && channelName != "Unknown channel") {
             std::cout << "Joined channel "+channelName << "\n";
         } else if (std::stoi(recieptId) % 2 == 1 && channelName != "Unknown channel") {
             std::cout << "Exited channel " << channelName << std::endl;
         } else {
             std::cerr << "Unknown receipt ID: " +channelName << "\n";
         }
-        lock.unlock();
+        
 
     } else if (command == "ERROR") {
-        std::cerr << "ERROR FROM SERVER" << "\n" << "\n"<< "ERROR"<< "\n" << "message:" +frame.getBody() << "\n";
+        std::cerr << "ERROR FROM SERVER" << "\n" << "\n"<< "ERROR"<< "\n" << "message:" +frame.getHeader("message") << std::endl;
         shouldTerminate = true;
      } else if (command == "CONNECTED") {
         std::cout << "Login Successful "<< "\n";

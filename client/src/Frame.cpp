@@ -83,10 +83,10 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
         std::cerr << "Failed to send CONNECT frame.\n";
         shouldTerminate = true;
     }
-    else {
-        std::cout << "Connected to " << hostPort << std::endl;
-        std::cout <<frameString<< std::endl;
-    }
+    // else {
+    //     std::cout << "Connected to " << hostPort << std::endl;
+    //     std::cout <<frameString<< std::endl;
+    // }
 }
 
 // Handle SUBSCRIBE frame
@@ -115,15 +115,15 @@ void Frame::handleSubscribe(ConnectionHandler& connectionHandler, const std::str
     };
 
 // check 
-     std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
-    std:: cerr << "reciept id map size before insert: " << mapRecieptID.size() << "\n";
+    //  std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
+    // std:: cerr << "reciept id map size before insert: " << mapRecieptID.size() << "\n";
 
     mapChannelID[channelName]=subscriptionId;
     mapRecieptID[recieptsubscribe] = channelName;
     
     // check 
-    std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
-    std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
+    // std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
+    // std:: cerr << "reciept id map size after insert: " << mapRecieptID.size() << "\n";
 
     lock.unlock();
 
@@ -159,16 +159,16 @@ void Frame::handleUnsubscribe(ConnectionHandler& connectionHandler, const std::s
         {"id", std::to_string(subscriptionId)}, 
         {"receipt", std::to_string(recieptUnsubscribe)}
     };
-// check 
-    std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
-    std:: cerr << "reciept id map size before insert: " << mapReceiptID.size() << "\n";
+// // check 
+//     std::cerr << "channel id map size before insert: " << mapChannelID.size() << "\n";
+//     std:: cerr << "reciept id map size before insert: " << mapReceiptID.size() << "\n";
     
     mapReceiptID[recieptUnsubscribe] = channelName;
     Frame unsubscribeFrame("UNSUBSCRIBE", headers, "", protocol) ;
 
-// check 
-    std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
-    std:: cerr << "reciept id map size after insert: " << mapReceiptID.size() << "\n";
+// // check 
+//     std::cerr << "channel id map size after insert: " << mapChannelID.size() << "\n";
+//     std:: cerr << "reciept id map size after insert: " << mapReceiptID.size() << "\n";
 
     lock.unlock();
     // Send frame
@@ -233,6 +233,10 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
 void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldTerminate) {
 
     int receiptId = protocol.getandIncrementReceiptUnsubscribe();
+    std::unique_lock<std::mutex> lock(protocol.getReceiptMutex());
+    std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapReceiptID();
+    mapRecieptID[receiptId]="logout";
+    lock.unlock();
 
     std::unordered_map<std::string, std::string> headers = {
         {"receipt", std::to_string(receiptId)}
@@ -245,9 +249,9 @@ void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldT
         std::cerr << "Failed to send DISCONNECT frame.\n";
     }
      // Close the socket
-    connectionHandler.close(); // might not be necessery- maybe better in main
-    shouldTerminate = true; // Signal protocol termination
-     std::cout << "Logged out" << std::endl;
+    // connectionHandler.close(); // might not be necessery- maybe better in main
+    // shouldTerminate = true; // Signal protocol termination
+    //  std::cout << "Logged out" << std::endl;
 }   
 
 
@@ -310,7 +314,7 @@ void Frame::handleSummary(const std::string& channelName, const std::string& use
     outputFile << "Forces arrival at scene: " << report.forcesArrivalCount << "\n\n";
 
     // Write the sorted event details
-    outputFile << "Event Reports:\n";
+    outputFile << "Event Reports:\n\n";
     int reportNumber = 1;
 
     for (const Event& event : report.events) {
