@@ -1,12 +1,13 @@
 #include <iostream>
 #include <sstream>
+#include <atomic>
 #include "../include/StompProtocol.h"
 #include "../include/event.h"
 #include "../include/Frame.h"
 
 
 StompProtocol::StompProtocol(ConnectionHandler& handler)
-    : shouldTerminate(false),
+    : connectionActive(true),
       connectionHandler(handler),
       reports(),
       reportsMutex(),
@@ -21,13 +22,13 @@ StompProtocol::StompProtocol(ConnectionHandler& handler)
 void StompProtocol:: sendLoginFrame(const std::string& hostPort, const std::string& login, const std::string& passcode){ 
     Frame frame(*this);
     this->login = login;
-    frame.handleConnect(connectionHandler, hostPort, login, passcode, shouldTerminate);
+    frame.handleConnect(connectionHandler, hostPort, login, passcode, std::ref(connectionActive));
 }
    
    
 void StompProtocol:: sendLogoutFrame(){
     Frame frame(*this);
-    frame.handleDisconnect(connectionHandler,shouldTerminate);
+    frame.handleDisconnect(connectionHandler);
 }
 
 void StompProtocol::processCommand(const std::string& command) {
@@ -138,8 +139,7 @@ void StompProtocol::processServerResponse(const std::string& response) {
         std::string channelName = (it != mapReceiptID.end()) ? it->second : "Unknown channel";
         lock.unlock();
         if(channelName == "logout"){
-            //connectionHandler.close(); // might not be necessery- maybe better in main
-            shouldTerminate = true; // Signal protocol termination
+            connectionActive = false; // Signal protocol termination
             std::cout << "Logged out" << std::endl;
         
         }else if (std::stoi(recieptId) % 2 == 0 && channelName != "Unknown channel") {
@@ -152,8 +152,8 @@ void StompProtocol::processServerResponse(const std::string& response) {
         
 
     } else if (command == "ERROR") {
+        connectionActive = false;
         std::cerr << "ERROR FROM SERVER" << "\n" << "\n"<< "ERROR"<< "\n" << "message:" +frame.getHeader("message") << std::endl;
-        shouldTerminate = true;
      } else if (command == "CONNECTED") {
         std::cout << "Login Successful "<< "\n";
     } else {
@@ -188,8 +188,8 @@ int StompProtocol::getandIncrementReceiptSubscribe(){
     return receiptsubscribe+2;
 }
 
-bool StompProtocol::getShouldTerminate() const {
-    return shouldTerminate;
+std::atomic<bool>& StompProtocol::getconnectionActive() {
+    return connectionActive;
 }
 
 std::mutex& StompProtocol::getReportsMutex() {
@@ -199,10 +199,7 @@ std::mutex& StompProtocol::getReportsMutex() {
 std::mutex& StompProtocol::getReceiptMutex() {
     return receiptMutex;
 }
-//setters
-void StompProtocol::setShouldTerminate(bool terminate) {
-    shouldTerminate = terminate;
-}
+
 
 const std::string StompProtocol::getLogin() const{
     return login;

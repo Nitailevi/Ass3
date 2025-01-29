@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 class StompProtocol;
 
@@ -29,11 +30,11 @@ public:
     std::string toString() const;
 
     // Frame operations
-    void handleConnect(class ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, bool& shouldTerminate);
+    void handleConnect(class ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, std::atomic<bool>& connectionActive);
     void handleSubscribe(class ConnectionHandler& connectionHandler, const std::string& channelName);
     void handleUnsubscribe(class ConnectionHandler& connectionHandler, const std::string& channelName);
     void handleReport(class ConnectionHandler& connectionHandler, std::string json_path);
-    void handleDisconnect(class ConnectionHandler& connectionHandler, bool& shouldTerminate);
+    void handleDisconnect(class ConnectionHandler& connectionHandler);
     void handleSummary(const std::string& channelName, const std::string& user, const std::string& filePath);
     std::string epochToDate(const int time);
 

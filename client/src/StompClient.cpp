@@ -5,36 +5,42 @@
 #include "../include/StompProtocol.h"
 #include "../include/Frame.h"
 
-    void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& protocol, std::atomic<bool>& shouldTerminate) {
-    while (!shouldTerminate) { 
+void serverResponseHandler(ConnectionHandler& connectionHandler, StompProtocol& protocol, std::atomic<bool>&connectionActive) {
+    while (connectionActive) { 
         std::string response;
         if (!connectionHandler.getLine(response)) { //check if the connection is still open
-            std::cerr << "Disconnected from server\n";
-            shouldTerminate = true;
+            std::cout << "Disconnected from server"<< std::endl;
+            connectionActive = false;
             break;
         }
         protocol.processServerResponse(response);  //process the response
-        if (protocol.getShouldTerminate()) {
-            shouldTerminate = true;
+        if (!protocol.getconnectionActive()) {
+            std::cout << "Disconnected from server"<< std::endl;
+            connectionActive = false;
+            break;
         }
     }
 }
+std::atomic<bool> programShouldEnd(false); 
+std::atomic<bool> connectionActive(false);
+
 
 int main() {
-    std::atomic<bool> shouldTerminate(false);
-    bool loggedIn = false;
-    std::thread serverThread;
-    
-    while (!shouldTerminate) {
+    std::string pendingCommand;
+    while (!programShouldEnd) {
         std::string command;
+        if(!pendingCommand.empty()){
+        command=pendingCommand;
+        pendingCommand.clear();
+        }else{
         std::getline(std::cin, command);
+        }
         std::istringstream iss(command); // allows going word by word
         std::string action;
         iss >> action; //first word
 
         if (action == "login") {
-           
-            if (loggedIn) {
+            if (connectionActive) {
                 std::cout << "user already logedin" << std::endl;
                 continue;
             }
@@ -52,37 +58,45 @@ int main() {
             std::string host = hostPort.substr(0, colonPos);
             int port = std::stoi(hostPort.substr(colonPos + 1));
             ConnectionHandler connectionHandler(host, port);
+
             if (!connectionHandler.connect()) { //connect to the server
                 std::cout <<"Connection failed (Error: Invalid argument)\n" "Cannot connect to " << host << ":" << port << "please try to login again"<< std::endl;
                 continue;
             }
+            connectionActive=true;
 
             StompProtocol protocol(connectionHandler);
+            std::thread serverThread (serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(connectionActive));
+
             protocol.sendLoginFrame(hostPort, login, passcode);
+            // if (serverThread.joinable()){
+            //     serverThread.join();
+            // }
 
-            std::thread serverThread (serverResponseHandler, std::ref(connectionHandler), std::ref(protocol), std::ref(shouldTerminate));
-            loggedIn = true;
-
-            while (!shouldTerminate) { 
-                std::getline(std::cin, command);
-                if (command == "logout") {
-                    protocol.sendLogoutFrame(); 
-                } else {
-                    protocol.processCommand(command);
-                }
+            while (connectionActive) { 
+                std::string subCommand;
+                std::cout << "sub level" << std::endl;
+                    std::getline(std::cin, subCommand);
+                    if (subCommand == "logout") {
+                        protocol.sendLogoutFrame(); 
+                    } else if(action != "login") {
+                        std::cout << "not login level" << std::endl;
+                        protocol.processCommand(subCommand);
+                        } else{
+                            pendingCommand=subCommand;
+                        }
+            
+                    if (serverThread.joinable()){
+                        serverThread.join();
+                    }
             }
-            if (serverThread.joinable()){
-                serverThread.join();
-            }
 
-        } else if (!loggedIn) {
+        } else {
             std::cout << "please login first" << std::endl;
             continue;
         }
-        
-
-       if (serverThread.joinable())
-           serverThread.join();
     }
+
+
     return 0;
 }

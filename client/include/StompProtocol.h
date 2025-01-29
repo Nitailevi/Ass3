@@ -8,6 +8,7 @@
 #include <mutex>
 #include "ConnectionHandler.h"
 #include "event.h"
+#include <atomic>
 
 
 class Frame;
@@ -26,7 +27,7 @@ struct summaryReport { //structure ment to keep track of events reported by User
 
 class StompProtocol {
 private:
-    bool shouldTerminate;                // Indicates if the protocol should stop
+    std::atomic<bool> connectionActive;                // Indicates if the protocol should stop
     ConnectionHandler& connectionHandler; // Reference to the ConnectionHandler
 
     std::map<std::string, std::map<std::string, summaryReport>> reports; //outer -channel name, inner user name
@@ -55,8 +56,6 @@ public:
     // Process server responses like `MESSAGE`, `RECEIPT`, `ERROR`
     void processServerResponse(const std::string& response);
 
-    // Check if the protocol should terminate
-    // bool shouldTerminateProtocol() const;
 
     //getters
      std::map<std::string, std::map<std::string, summaryReport>>& getReports() ; ;
@@ -65,14 +64,12 @@ public:
     int getandIncrementSubscriptionId();
     int getandIncrementReceiptUnsubscribe();
     int getandIncrementReceiptSubscribe();
-    bool getShouldTerminate() const;
+    std::atomic<bool>& getconnectionActive() ;
     std::mutex& getReportsMutex();
     std::mutex& getReceiptMutex();
 
     const std::string getLogin() const;
 
-    //setters
-    void setShouldTerminate(bool terminate);
 };
 
 #endif // STOMPPROTOCOL_H

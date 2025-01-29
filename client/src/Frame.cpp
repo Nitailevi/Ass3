@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <atomic>
 #include "../include/ConnectionHandler.h"
 #include "../include/event.h"
 #include "../include/StompProtocol.h"
@@ -65,7 +66,7 @@ std::string Frame::toString() const {
     return frame.str();
 }
 // Handle CONNECT frame
-void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, bool& shouldTerminate) {
+void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::string& hostPort, const std::string& username, const std::string& password, std::atomic<bool>& connectionActive) {
     // Build CONNECT frame
     std::unordered_map<std::string, std::string> headers = {
         {"accept-version", "1.2"},
@@ -81,12 +82,12 @@ void Frame::handleConnect(ConnectionHandler& connectionHandler, const std::strin
     
     if (!connectionHandler.sendLine(frameString)) { // send the frame and check if it was sent- maybe DELETE
         std::cerr << "Failed to send CONNECT frame.\n";
-        shouldTerminate = true;
+        connectionActive = false;
     }
-    // else {
-    //     std::cout << "Connected to " << hostPort << std::endl;
-    //     std::cout <<frameString<< std::endl;
-    // }
+    else {
+        std::cout << "Connected to " << hostPort << std::endl;
+        std::cout <<frameString<< std::endl;
+    }
 }
 
 // Handle SUBSCRIBE frame
@@ -230,10 +231,12 @@ void Frame::handleReport(ConnectionHandler& connectionHandler,std::string json_p
 }
 
 // Handle DISCONNECT frame
-void Frame::handleDisconnect(ConnectionHandler& connectionHandler, bool& shouldTerminate) {
+void Frame::handleDisconnect(ConnectionHandler& connectionHandler) {
 
     int receiptId = protocol.getandIncrementReceiptUnsubscribe();
+
     std::unique_lock<std::mutex> lock(protocol.getReceiptMutex());
+
     std::unordered_map<int, std::string>& mapRecieptID = protocol.getMapReceiptID();
     mapRecieptID[receiptId]="logout";
     lock.unlock();
